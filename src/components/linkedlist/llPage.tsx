@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Input } from '../ui/input.tsx';
-import { Button } from '../ui/button';
 import {
   Select,
   SelectContent,
@@ -10,9 +9,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select.tsx';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu.tsx';
+import { ChevronDownIcon } from 'lucide-react';
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup.ts';
 import { toast } from 'sonner';
+import FloatingHelper from '../FloatingHelper';
+import ColorLegend, { LINKED_LIST_LEGEND } from '../ColorLegend';
 import {
   type ListConfig,
   type LLNode,
@@ -44,6 +54,9 @@ const LinkedListPage = () => {
   const newNodeValRef = useRef<HTMLSpanElement>(null);
   const newNodeNextPtrRef = useRef<HTMLSpanElement>(null);
   const newNodePrevPtrRef = useRef<HTMLSpanElement>(null);
+  // Tracks the navbar element so we can position the staging node below it
+  const navRef = useRef<HTMLDivElement>(null);
+  const [stagingTop, setStagingTop] = useState(112);
 
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const nextArrowRefs = useRef<Map<number | string, SVGLineElement>>(new Map());
@@ -53,6 +66,18 @@ const LinkedListPage = () => {
   const MAX_LL_SIZE = 20;
 
   const { contextSafe } = useGSAP({ scope: screenRef });
+
+  // Keep staging node top aligned just below the navbar, even when it wraps on mobile
+  useEffect(() => {
+    if (!navRef.current) return;
+    const update = () => {
+      if (navRef.current) setStagingTop(navRef.current.offsetHeight + 16);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(navRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     if (list.length == 0) {
@@ -625,72 +650,99 @@ const LinkedListPage = () => {
 
       {/* ── Navbar ───────────────────────────────────────────────── */}
       <div
-        className="flex flex-wrap items-center justify-between gap-3 px-6 py-3
-        bg-background border-0"
+        ref={navRef}
+        className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3 bg-background border-0"
       >
         <div className="flex flex-wrap items-center gap-2">
+          {/* Inputs */}
           <Input
-            className="input w-fit p-2"
+            className="input w-24"
             placeholder="Value"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleOp('insertAtTail')}
           />
           <Input
-            className="input w-fit p-2"
+            className="input w-20"
             placeholder="Index"
             value={pos}
             onChange={(e) => setPos(e.target.value)}
           />
-          {(['insertAtHead', 'insertAtTail', 'insertAtIndex'] as const).map(
-            (op) => (
-              <button
-                key={op}
-                onClick={() => handleOp(op)}
-                className="btn-primary "
-              >
-                {op === 'insertAtHead'
-                  ? 'Insert Head'
-                  : op === 'insertAtTail'
-                    ? 'Insert Tail'
-                    : 'Insert At'}
+
+          {/* Insert ▾ dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="btn-primary flex items-center gap-1">
+                Insert <ChevronDownIcon className="w-3.5 h-3.5 opacity-70" />
               </button>
-            )
-          )}
-          <Button onClick={generateRandom} className="btn-neutral ">
-            Generate Random
-          </Button>
-          <div className="w-px h-6 bg-slate-800 mx-1" />
-          {(
-            [
-              'deleteAtHead',
-              'deleteAtTail',
-              'deleteAtIndex',
-              'reverse',
-              'clear',
-            ] as const
-          ).map((op) => (
-            <button
-              key={op}
-              onClick={() => handleOp(op)}
-              className="btn-danger"
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="dropdown-content w-44"
             >
-              {op === 'deleteAtHead'
-                ? 'Del Head'
-                : op === 'deleteAtTail'
-                  ? 'Del Tail'
-                  : op === 'deleteAtIndex'
-                    ? 'Del At'
-                    : op.charAt(0).toUpperCase() + op.slice(1)}
-            </button>
-          ))}
+              <DropdownMenuLabel className="dropdown-label">
+                Insert position
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleOp('insertAtHead')}>
+                Insert at Head
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOp('insertAtTail')}>
+                Insert at Tail
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOp('insertAtIndex')}>
+                Insert at Index
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Delete ▾ dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="btn-danger flex items-center gap-1">
+                Delete <ChevronDownIcon className="w-3.5 h-3.5 opacity-70" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="dropdown-content w-44"
+            >
+              <DropdownMenuLabel className="dropdown-label">
+                Delete position
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleOp('deleteAtHead')}>
+                Delete Head
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOp('deleteAtTail')}>
+                Delete Tail
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOp('deleteAtIndex')}>
+                Delete at Index
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Standalone: Reverse + Clear */}
+          <button onClick={() => handleOp('reverse')} className="btn-neutral">
+            Reverse
+          </button>
+          <button onClick={() => handleOp('clear')} className="btn-danger">
+            Clear
+          </button>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <button onClick={generateRandom} className="btn-neutral">
+            Generate Random
+          </button>
         </div>
 
         <Select
           value={listType}
           onValueChange={(type) => switchListType(type as ListType)}
         >
-          <SelectTrigger className="w-[240px] select-trigger">
+          <SelectTrigger className="w-[200px] select-trigger">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="select-content">
@@ -707,7 +759,7 @@ const LinkedListPage = () => {
       </div>
 
       {/* ── Visualization ───────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col justify-center px-10 py-8 overflow-hidden relative">
+      <div className="flex-1 flex flex-col justify-center px-4 sm:px-10 py-4 sm:py-8 overflow-hidden relative">
         {/* HEAD pointer box */}
         <div className="flex flex-col items-start mb-1">
           <div
@@ -732,7 +784,7 @@ const LinkedListPage = () => {
           style={{
             opacity: 0,
             position: 'absolute',
-            top: 112,
+            top: stagingTop,
             left: 40,
             zIndex: 30,
           }}
@@ -740,29 +792,44 @@ const LinkedListPage = () => {
         >
           {config.isDoubly ? (
             <div
-              className="flex w-48 h-16 border-2 border-transparent rounded-xl bg-[#00ff11] text-black font-bold
+              className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-[#00ff11] text-black font-bold
               items-center justify-around"
-              style={{ boxShadow: '0 0 15px rgba(0,255,17,0.6)' }}
+              style={{
+                width: 'clamp(120px, 22vw, 192px)',
+                boxShadow: '0 0 15px rgba(0,255,17,0.6)',
+              }}
             >
-              <span ref={newNodePrevPtrRef} className="text-xs font-mono px-1">
+              <span
+                ref={newNodePrevPtrRef}
+                className="text-[10px] sm:text-xs font-mono px-1"
+              >
                 NULL
               </span>
               <div className="w-px h-8 bg-black/30" />
-              <span className="text-xl">-</span>
+              <span className="text-base sm:text-xl">-</span>
               <div className="w-px h-8 bg-black/30" />
-              <span ref={newNodeNextPtrRef} className="text-xs font-mono px-1">
+              <span
+                ref={newNodeNextPtrRef}
+                className="text-[10px] sm:text-xs font-mono px-1"
+              >
                 NULL
               </span>
             </div>
           ) : (
             <div
-              className="flex w-36 h-16 border-2 border-transparent rounded-xl bg-[#00ff11] text-black font-bold
+              className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-[#00ff11] text-black font-bold
               items-center justify-around"
-              style={{ boxShadow: '0 0 15px rgba(0,255,17,0.6)' }}
+              style={{
+                width: 'clamp(100px, 18vw, 144px)',
+                boxShadow: '0 0 15px rgba(0,255,17,0.6)',
+              }}
             >
-              <span className="text-xl">-</span>
+              <span className="text-base sm:text-xl">-</span>
               <div className="w-px h-8 bg-black/30" />
-              <span ref={newNodeNextPtrRef} className="text-xs font-mono px-1">
+              <span
+                ref={newNodeNextPtrRef}
+                className="text-[10px] sm:text-xs font-mono px-1"
+              >
                 NULL
               </span>
             </div>
@@ -807,8 +874,10 @@ const LinkedListPage = () => {
                     className="flex border-2 border-transparent rounded-xl viz-ll-node font-bold
                       items-center justify-around"
                     style={{
-                      width: config.isDoubly ? '200px' : '144px',
-                      height: '64px',
+                      width: config.isDoubly
+                        ? 'clamp(130px,22vw,200px)'
+                        : 'clamp(100px,18vw,144px)',
+                      height: 'clamp(44px,9vw,64px)',
                       transition: 'background-color 0.15s, box-shadow 0.15s',
                     }}
                   >
@@ -821,7 +890,9 @@ const LinkedListPage = () => {
                       </>
                     )}
 
-                    <span className="text-xl leading-none">{item.value}</span>
+                    <span className="text-base sm:text-xl leading-none">
+                      {item.value}
+                    </span>
 
                     <div className="w-px h-8 viz-ll-divider" />
 
@@ -954,7 +1025,7 @@ const LinkedListPage = () => {
         )}
 
         {/* Legend */}
-        <div className="flex gap-5 mt-8 text-[11px] font-mono muted-text">
+        {/* <div className="flex gap-5 mt-8 text-[11px] font-mono muted-text">
           <span>
             <span className="text-cyan-500">■</span> active
           </span>
@@ -980,7 +1051,7 @@ const LinkedListPage = () => {
               <span className="text-pink-500">■</span> circular link
             </span>
           )}
-        </div>
+        </div> */}
       </div>
 
       {/* ── Footer ───────────────────────────────────────────────── */}
@@ -992,6 +1063,14 @@ const LinkedListPage = () => {
           nodes: <span className="text-cyan-500">{activeLen}</span>
         </span>
         <span>{config.label}</span>
+      </div>
+      <FloatingHelper />
+      {/* Color legend */}
+      <div className="color-legend-fixed fixed bottom-0 left-1/2 -translate-x-1/2 z-40 rounded-t-lg">
+        <ColorLegend
+          entries={LINKED_LIST_LEGEND}
+          className="px-4 py-1.5 rounded-t-lg"
+        />
       </div>
     </div>
   );

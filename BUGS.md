@@ -27,7 +27,7 @@ Even in dark mode there are color mismatchs and doesnt always cohesive
 
 ## Missing Implementations
 
---- Monotonic Stack,Monotonic Queue,Circular Queue & Graph Algo's
+---Monotonic Queue,Circular Queue & Graph Algo's
 
 <!-- No Feedback on Queue Full or Invalid Inputs need of Toasts or Alerts -->
 
@@ -37,6 +37,7 @@ Regeneration on Clear Automatically
 
 ## Improvement in Animation
 
---- Heappush is missing animation
+<!-- --- Heappush is missing animation -->
+
 -- Merge Sort and Binary Search need improvement in animation
 -- All sorting need in improement in animations

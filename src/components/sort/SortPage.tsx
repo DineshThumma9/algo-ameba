@@ -5,6 +5,12 @@ import Flip from 'gsap/Flip';
 import { useGSAP } from '@gsap/react';
 import SharedLayout from '@/components/SharedLayout';
 import { toast } from 'sonner';
+import FloatingHelper from '@/components/FloatingHelper';
+import {
+  SORT_BASIC_LEGEND,
+  SORT_MERGE_LEGEND,
+  SORT_QUICK_LEGEND,
+} from '@/components/ColorLegend';
 import {
   sortAlgorithmBuilders,
   type SortFrame,
@@ -62,7 +68,7 @@ const SortPage = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(0.75);
   const [inputValue, setInputValue] = useState('');
-  const [phaseLabel, setPhaseLabel] = useState('');
+  const [phaseLabel, setPhaseLabel] = useState(' ');
 
   const barsContainerRef = useRef<HTMLDivElement>(null);
   const barRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -341,17 +347,27 @@ const SortPage = () => {
         onSpeedChange={(v) => setSpeed(clampSpeed(v))}
         onSpeedIncrease={() => setSpeed((p) => clampSpeed(p + 0.25))}
         onSpeedDecrease={() => setSpeed((p) => clampSpeed(p - 0.25))}
+        legend={
+          mode === 'merge'
+            ? SORT_MERGE_LEGEND
+            : mode === 'quick'
+              ? SORT_QUICK_LEGEND
+              : SORT_BASIC_LEGEND
+        }
       >
         <div
-          className="w-full flex flex-col justify-center items-center max-w-[1600px] px-6 md:px-12 py-4 overflow-visible"
+          className="w-full flex flex-col justify-center items-center max-w-[1600px] px-4 sm:px-6 md:px-12 py-3 sm:py-4 overflow-visible"
           style={{
-            minHeight: mode === 'merge' || mode === 'quick' ? '600px' : '400px',
+            minHeight:
+              mode === 'merge' || mode === 'quick'
+                ? 'clamp(220px, 52vh, 600px)'
+                : 'clamp(160px, 42vh, 400px)',
           }}
         >
           {/* Phase label — merge sort split/merge context + quick sort pivot announcement */}
           {(mode === 'merge' || mode === 'quick') && (
             <div
-              className="mb-6 text-sm font-mono tracking-wide transition-all duration-500 min-h-[1.5rem]"
+              className="mb-2 text-sm font-mono tracking-wide transition-all duration-500 min-h-[1.5rem]"
               style={{ color: 'var(--brand)', opacity: phaseLabel ? 1 : 0 }}
             >
               {phaseLabel}
@@ -360,10 +376,12 @@ const SortPage = () => {
 
           <div
             ref={barsContainerRef}
-            className="relative bar-container flex gap-2 justify-center items-end p-4 overflow-visible"
+            className="relative bar-container flex gap-1 sm:gap-2 justify-center items-end p-3 sm:p-4 overflow-visible"
             style={{
               minHeight:
-                mode === 'merge' || mode === 'quick' ? '360px' : '260px',
+                mode === 'merge' || mode === 'quick'
+                  ? 'clamp(140px, 36vh, 360px)'
+                  : 'clamp(100px, 26vh, 260px)',
             }}
           >
             {bars.map((bar) => (
@@ -373,7 +391,7 @@ const SortPage = () => {
                 ref={(node) => {
                   barRefs.current[bar.id] = node;
                 }}
-                className={`bar w-10 rounded-lg flex items-center justify-center font-mono text-sm ${getBarColor(barStates[bar.id])}`}
+                className={`bar w-5 sm:w-7 md:w-10 rounded-md sm:rounded-lg flex items-center justify-center font-mono text-[8px] sm:text-xs md:text-sm ${getBarColor(barStates[bar.id])}`}
                 style={{ height: `${Math.max(Math.abs(bar.value) * 4, 30)}px` }}
               >
                 {bar.value}
@@ -382,6 +400,7 @@ const SortPage = () => {
           </div>
         </div>
       </SharedLayout>
+      <FloatingHelper text={phaseLabel} />
     </div>
   );
 };

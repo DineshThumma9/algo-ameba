@@ -5,7 +5,21 @@ export type SearchBar = {
   value: number;
 };
 
-export type SearchBarState = 'checking' | 'found' | 'discarded';
+export type SearchBarState =
+  | 'checking'
+  | 'found'
+  | 'discarded'
+  | 'active'
+  | 'mid';
+
+/**
+ * xFraction: horizontal spread offset (-1…+1). Multiplied by a pixel constant in SearchPage.
+ * yLevel  : 0 = baseline, positive = lifted above.
+ */
+export type SearchBarOffset = {
+  xFraction: number;
+  yLevel: number;
+};
 
 export type SearchFrame = {
   states: Record<string, SearchBarState>;
@@ -16,8 +30,12 @@ export type SearchFrame = {
   leftDiscardedIds?: string[]; // fly to -x
   rightDiscardedIds?: string[]; // fly to +x
   focusId?: string;
-  isFinalFound?: boolean; // triggers celebration animation
-  isNotFound?: boolean; // triggers all-grey ending
+  isFinalFound?: boolean;
+  isNotFound?: boolean;
+  /** Step label shown above bars (merge-sort style) */
+  phaseLabel?: string;
+  /** Per-bar spatial offsets for position animation */
+  offsets?: Record<string, SearchBarOffset>;
 };
 
 export type SearchRunResult = {
@@ -35,12 +53,13 @@ const linearSearch = (bars: SearchBar[], target: number): SearchRunResult => {
     const current = bars[index];
     frames.push({
       states: { [current.id]: 'checking' },
-      duration: 0.8, // enough for the highlight to be seen clearly
+      duration: 0.8,
       activeIds: [current.id],
       discardedIds: bars
         .filter((bar) => bar.id !== current.id)
         .map((bar) => bar.id),
       focusId: current.id,
+      phaseLabel: `Checking index ${index}: value ${current.value} ${current.value === target ? '= ' : '≠ '}${target}`,
     });
 
     if (current.value === target) {
@@ -58,6 +77,7 @@ const linearSearch = (bars: SearchBar[], target: number): SearchRunResult => {
         .filter((bar) => bar.id !== foundId)
         .map((bar) => bar.id),
       focusId: foundId,
+      phaseLabel: `Found ${target}!`,
     });
   } else {
     frames.push({
@@ -65,6 +85,7 @@ const linearSearch = (bars: SearchBar[], target: number): SearchRunResult => {
       duration: 0.8,
       activeIds: [],
       discardedIds: bars.map((bar) => bar.id),
+      phaseLabel: `${target} not found in array`,
     });
   }
 
@@ -82,53 +103,124 @@ const binarySearch = (bars: SearchBar[], target: number): SearchRunResult => {
   let low = 0;
   let high = sortedBars.length - 1;
   let foundId: string | undefined;
+  let stepNum = 0;
 
-  // Accumulate eliminated IDs with their side so every frame carries full history
-  const eliminatedLeft = new Set<string>(); // bars eliminated from the left side (fly -x)
-  const eliminatedRight = new Set<string>(); // bars eliminated from the right side (fly +x)
+  const eliminatedLeft = new Set<string>();
+  const eliminatedRight = new Set<string>();
+
+  // ── Initial frame: show the full sorted array ──
+  {
+    const states: Record<string, SearchBarState> = {};
+    sortedBars.forEach((b) => {
+      states[b.id] = 'active';
+    });
+    frames.push({
+      states,
+      duration: 1.2,
+      activeIds: sortedBars.map((b) => b.id),
+      discardedIds: [],
+      leftDiscardedIds: [],
+      rightDiscardedIds: [],
+      phaseLabel: `Sorted array — searching for ${target}`,
+      offsets: buildOffsets(sortedBars, 0, sortedBars.length - 1),
+    });
+  }
 
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
-    const activeIds = sortedBars.slice(low, high + 1).map((bar) => bar.id);
+    const midBar = sortedBars[mid];
+    stepNum++;
+
+    // Active range IDs
+    const activeIds = sortedBars.slice(low, high + 1).map((b) => b.id);
     const discardedIds = sortedBars
       .filter((_, i) => i < low || i > high)
-      .map((bar) => bar.id);
+      .map((b) => b.id);
 
+    // ── Frame: show active range with mid highlighted ──
     const states: Record<string, SearchBarState> = {};
     activeIds.forEach((id) => {
-      states[id] = 'checking';
+      states[id] = 'active';
     });
     discardedIds.forEach((id) => {
       states[id] = 'discarded';
     });
+    states[midBar.id] = 'mid';
+
+    const offsets = buildOffsets(sortedBars, low, high, mid);
 
     frames.push({
       states,
-      // 1.8s hold — animation itself takes ~1.1s, this gives ~0.7s of breath before next frame
       duration: 1.8,
       activeIds,
       discardedIds,
       leftDiscardedIds: [...eliminatedLeft],
       rightDiscardedIds: [...eliminatedRight],
-      focusId: sortedBars[mid].id,
+      focusId: midBar.id,
+      phaseLabel: `Step ${stepNum}: mid = index ${mid}, value ${midBar.value} ${
+        midBar.value === target ? '=' : midBar.value < target ? '<' : '>'
+      } ${target}`,
+      offsets,
     });
 
-    if (sortedBars[mid].value === target) {
-      foundId = sortedBars[mid].id;
+    if (midBar.value === target) {
+      foundId = midBar.id;
       break;
     }
 
-    if (sortedBars[mid].value < target) {
-      // Left half (low..mid) is now useless — slide them left (-x)
+    // ── Frame: show which half is being eliminated ──
+    if (midBar.value < target) {
+      // Eliminate left half (low..mid)
       for (let i = low; i <= mid; i++) eliminatedLeft.add(sortedBars[i].id);
+
+      const elimStates = { ...states };
+      for (let i = low; i <= mid; i++)
+        elimStates[sortedBars[i].id] = 'discarded';
+
+      frames.push({
+        states: elimStates,
+        duration: 1.2,
+        activeIds: sortedBars.slice(mid + 1, high + 1).map((b) => b.id),
+        discardedIds: [
+          ...discardedIds,
+          ...sortedBars.slice(low, mid + 1).map((b) => b.id),
+        ],
+        leftDiscardedIds: [...eliminatedLeft],
+        rightDiscardedIds: [...eliminatedRight],
+        focusId: midBar.id,
+        phaseLabel: `${midBar.value} < ${target} → eliminate left half [${low}…${mid}]`,
+        offsets: buildEliminateOffsets(sortedBars, low, mid, high, 'left'),
+      });
+
       low = mid + 1;
     } else {
-      // Right half (mid..high) is now useless — slide them right (+x)
+      // Eliminate right half (mid..high)
       for (let i = mid; i <= high; i++) eliminatedRight.add(sortedBars[i].id);
+
+      const elimStates = { ...states };
+      for (let i = mid; i <= high; i++)
+        elimStates[sortedBars[i].id] = 'discarded';
+
+      frames.push({
+        states: elimStates,
+        duration: 1.2,
+        activeIds: sortedBars.slice(low, mid).map((b) => b.id),
+        discardedIds: [
+          ...discardedIds,
+          ...sortedBars.slice(mid, high + 1).map((b) => b.id),
+        ],
+        leftDiscardedIds: [...eliminatedLeft],
+        rightDiscardedIds: [...eliminatedRight],
+        focusId: midBar.id,
+        phaseLabel: `${midBar.value} > ${target} → eliminate right half [${mid}…${high}]`,
+        offsets: buildEliminateOffsets(sortedBars, low, mid, high, 'right'),
+      });
+
       high = mid - 1;
     }
   }
 
+  // ── Final frame ──
   if (foundId) {
     const discardedIds = sortedBars
       .filter((bar) => bar.id !== foundId)
@@ -140,7 +232,6 @@ const binarySearch = (bars: SearchBar[], target: number): SearchRunResult => {
         ),
         [foundId]: 'found',
       },
-      // 2.5s — celebration animation (bars return + found rises) needs this room
       duration: 2.5,
       activeIds: [foundId],
       discardedIds,
@@ -148,6 +239,7 @@ const binarySearch = (bars: SearchBar[], target: number): SearchRunResult => {
       rightDiscardedIds: [...eliminatedRight],
       focusId: foundId,
       isFinalFound: true,
+      phaseLabel: `Found ${target} at index ${sortedBars.findIndex((b) => b.id === foundId)}!`,
     });
   } else {
     frames.push({
@@ -160,6 +252,7 @@ const binarySearch = (bars: SearchBar[], target: number): SearchRunResult => {
       leftDiscardedIds: [...eliminatedLeft],
       rightDiscardedIds: [...eliminatedRight],
       isNotFound: true,
+      phaseLabel: `${target} not found in array`,
     });
   }
 
@@ -170,6 +263,69 @@ const binarySearch = (bars: SearchBar[], target: number): SearchRunResult => {
     foundId,
   };
 };
+
+// ── Offset helpers (merge-sort style spatial positioning) ──────────────────
+
+/**
+ * Build offsets for the current active range.
+ * Active bars stay at x=0, mid bar lifts (yLevel=1).
+ */
+function buildOffsets(
+  bars: SearchBar[],
+  low: number,
+  high: number,
+  midIndex?: number
+): Record<string, SearchBarOffset> {
+  const result: Record<string, SearchBarOffset> = {};
+  for (let i = 0; i < bars.length; i++) {
+    if (i >= low && i <= high) {
+      result[bars[i].id] = {
+        xFraction: 0,
+        yLevel: midIndex !== undefined && i === midIndex ? 1 : 0,
+      };
+    } else {
+      // Out of range bars keep their position but are not animated by offsets
+      result[bars[i].id] = { xFraction: 0, yLevel: 0 };
+    }
+  }
+  return result;
+}
+
+/**
+ * Build offsets showing elimination animation.
+ * The eliminated side slides away (xFraction ±0.8), the remaining side stays centred.
+ */
+function buildEliminateOffsets(
+  bars: SearchBar[],
+  low: number,
+  mid: number,
+  high: number,
+  side: 'left' | 'right'
+): Record<string, SearchBarOffset> {
+  const result: Record<string, SearchBarOffset> = {};
+  for (let i = 0; i < bars.length; i++) {
+    if (side === 'left') {
+      // Eliminating low..mid
+      if (i >= low && i <= mid) {
+        result[bars[i].id] = { xFraction: -0.85, yLevel: 0 };
+      } else if (i > mid && i <= high) {
+        result[bars[i].id] = { xFraction: 0, yLevel: 0 };
+      } else {
+        result[bars[i].id] = { xFraction: 0, yLevel: 0 };
+      }
+    } else {
+      // Eliminating mid..high
+      if (i >= mid && i <= high) {
+        result[bars[i].id] = { xFraction: 0.85, yLevel: 0 };
+      } else if (i >= low && i < mid) {
+        result[bars[i].id] = { xFraction: 0, yLevel: 0 };
+      } else {
+        result[bars[i].id] = { xFraction: 0, yLevel: 0 };
+      }
+    }
+  }
+  return result;
+}
 
 export const searchAlgorithms: Record<
   SearchMode,

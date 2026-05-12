@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select.tsx';
 import { type ReactNode } from 'react';
 import ControllerFooter from '@/components/ControllerFooter.tsx';
+import ColorLegend, { type LegendEntry } from '@/components/ColorLegend';
 import { useNavigate } from 'react-router-dom';
 
 interface Algo {
@@ -19,7 +20,13 @@ interface Algo {
 
 // We will use this to track the state for visual rendering
 //
-export type BarState = 'default' | 'checking' | 'found' | 'discarded';
+export type BarState =
+  | 'default'
+  | 'checking'
+  | 'found'
+  | 'discarded'
+  | 'mid'
+  | 'active';
 
 interface SharedLayoutProps {
   inputValue: string;
@@ -43,6 +50,8 @@ interface SharedLayoutProps {
   onSpeedChange?: (value: number) => void;
   onSpeedIncrease?: () => void;
   onSpeedDecrease?: () => void;
+  /** Optional color legend entries — rendered in the footer row */
+  legend?: LegendEntry[];
 }
 
 const SharedLayout = ({
@@ -67,18 +76,19 @@ const SharedLayout = ({
   onSpeedChange,
   onSpeedIncrease,
   onSpeedDecrease,
+  legend,
 }: SharedLayoutProps) => {
   const navigate = useNavigate();
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="nav flex flex-wrap justify-between items-center gap-4 px-6 py-4">
+      <div className="nav flex flex-wrap justify-between items-center gap-2 px-3 py-2 sm:gap-4 sm:px-6 sm:py-3">
         {/* Input Insert */}
-        <div className={'flex items-center gap-2'}>
-          <div className="flex items-center gap-2">
+        <div className={'flex flex-wrap items-center gap-2 min-w-0'}>
+          <div className="flex items-center gap-2 min-w-0">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              className="input w-fit pl-3 pr-2 px-2"
+              className="input w-28"
               placeholder="Insert number"
               onKeyUp={(e) => {
                 if (e.code === 'Enter') {
@@ -118,8 +128,6 @@ const SharedLayout = ({
           <button onClick={() => generateRandomArray()} className="btn-neutral">
             Generate Random
           </button>
-
-          {/* Search */}
         </div>
 
         {/* Algorithm Dropdown */}
@@ -154,18 +162,30 @@ const SharedLayout = ({
       {/* Visualization Area */}
       <div className="flex-1 flex justify-center items-center">{children}</div>
 
-      {/* Controls */}
-      <ControllerFooter
-        isPlaying={isPlaying}
-        onPlay={onPlay}
-        onPause={onPause}
-        onNext={onNext}
-        onPrev={onPrev}
-        speed={speed}
-        onSpeedChange={onSpeedChange}
-        onSpeedIncrease={onSpeedIncrease}
-        onSpeedDecrease={onSpeedDecrease}
-      />
+      {/* Legend + Controls in the same footer band */}
+      <footer
+        className="footer flex flex-col gap-0 w-full"
+        style={{ borderTop: 'none' }}
+      >
+        {/* Color legend strip — only rendered when entries are provided */}
+        {legend && legend.length > 0 && (
+          <div className="w-full flex justify-center">
+            <ColorLegend entries={legend} />
+          </div>
+        )}
+
+        <ControllerFooter
+          isPlaying={isPlaying}
+          onPlay={onPlay}
+          onPause={onPause}
+          onNext={onNext}
+          onPrev={onPrev}
+          speed={speed}
+          onSpeedChange={onSpeedChange}
+          onSpeedIncrease={onSpeedIncrease}
+          onSpeedDecrease={onSpeedDecrease}
+        />
+      </footer>
     </div>
   );
 };

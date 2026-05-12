@@ -10,9 +10,12 @@ function pushToHeap(
   maxHeap: boolean
 ): {
   newHeap: number[];
+  preSwapHeap: number[];
   animateNodes: { childIdx: number; parentIdx: number }[];
 } {
   const newHeap = [...heap, val];
+  // Capture the heap state before any bubble-up swaps
+  const preSwapHeap = [...newHeap];
   let childIdx = newHeap.length - 1;
   let parentIdx = Math.floor((childIdx - 1) / 2);
   const animateNodes: { childIdx: number; parentIdx: number }[] = [];
@@ -30,7 +33,7 @@ function pushToHeap(
     parentIdx = Math.floor((childIdx - 1) / 2);
   }
 
-  return { newHeap, animateNodes };
+  return { newHeap, preSwapHeap, animateNodes };
 }
 
 function popFromHeap(

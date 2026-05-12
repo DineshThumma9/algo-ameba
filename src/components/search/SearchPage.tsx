@@ -4,12 +4,17 @@ import gsap from '@/gsapSetup'; // centralized GSAP instance with plugins regist
 import { useGSAP } from '@gsap/react';
 import { toast } from 'sonner';
 import SharedLayout from '@/components/SharedLayout';
+import FloatingHelper from '@/components/FloatingHelper';
 import { ROUTES } from '@/constants/routes';
 import { useSearchVizulizer } from '@/hooks/useSearchVizulizer';
 import {
   searchAlgorithms,
   type SearchFrame,
 } from '@/components/search/searchAlgorithms';
+import {
+  SEARCH_LINEAR_LEGEND,
+  SEARCH_BINARY_LEGEND,
+} from '@/components/ColorLegend';
 
 type SearchMode = 'linear' | 'binary';
 
@@ -17,6 +22,11 @@ const algoMap = [
   { name: 'Linear Search', value: 'linear' },
   { name: 'Binary Search', value: 'binary' },
 ] as const;
+
+// How many pixels correspond to xFraction = 1.0
+const X_OFFSET_SCALE = 220;
+// How many pixels does yLevel=1 lift a bar
+const Y_LEVEL_PX = 28;
 
 const SearchPage = () => {
   const location = useLocation();
@@ -27,6 +37,7 @@ const SearchPage = () => {
   const initialMode: SearchMode =
     queryMode === 'binary' || queryMode === 'linear' ? queryMode : routeMode;
   const [mode, setMode] = useState<SearchMode>(initialMode);
+  const [phaseLabel, setPhaseLabel] = useState(' ');
   const barsContainerRef = useRef<HTMLDivElement>(null);
   const barRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -75,6 +86,7 @@ const SearchPage = () => {
     gsap.set(path, { attr: { d: '' }, opacity: 0 });
   });
 
+  // ── Celebration: found bar rises, discarded bars sweep home ──
   const animateFoundCelebration = contextSafe((frame: SearchFrame) => {
     const foundId = frame.focusId;
     const allDiscarded = [
@@ -82,7 +94,6 @@ const SearchPage = () => {
       ...(frame.rightDiscardedIds ?? []),
       ...(frame.discardedIds ?? []),
     ];
-    // deduplicate
     const returnIds = [...new Set(allDiscarded)];
     const returnEls = getExistingBarElements(returnIds);
     const foundEl = foundId ? barRefs.current[foundId] : null;
@@ -93,13 +104,14 @@ const SearchPage = () => {
       defaults: { ease: 'power3.out', overwrite: 'auto' },
     });
 
-    // 1. All discarded bars sweep back to home — stagger from edges inward
+    // 1. All discarded bars sweep back, stagger edges inward
     if (returnEls.length > 0) {
       tl.to(
         returnEls,
         {
           x: 0,
-          opacity: 0.28, // stays slightly muted so found bar pops
+          y: 0,
+          opacity: 0.28,
           filter: 'grayscale(80%)',
           duration: 0.9,
           stagger: { amount: 0.22, from: 'edges' },
@@ -109,26 +121,21 @@ const SearchPage = () => {
       );
     }
 
-    // 2. Found bar: reset any offset, then rise with a big celebratory bounce
+    // 2. Found bar resets x, then launches up with a celebratory bounce
     if (foundEl) {
-      tl.set(foundEl, { x: 0 }, 0);
+      tl.set(foundEl, { x: 0, y: 0 }, 0);
       tl.to(
         foundEl,
-        {
-          y: -32,
-          scale: 1.22,
-          duration: 0.55,
-          ease: 'back.out(2.8)',
-        },
-        0.5
-      ); // starts while others are still sweeping back
+        { y: -36, scale: 1.22, duration: 0.55, ease: 'back.out(2.8)' },
+        0.45
+      );
 
-      // 3. Pulse glow ring — expand a box-shadow then fade
+      // 3. Neon green glow ring — expands then settles
       tl.to(
         foundEl,
         {
           boxShadow:
-            '0 0 0 6px rgba(74,222,128,0.5), 0 0 28px rgba(74,222,128,0.35)',
+            '0 0 0 6px rgba(0,255,17,0.45), 0 0 32px rgba(0,255,17,0.3)',
           duration: 0.35,
           ease: 'power2.out',
         },
@@ -138,7 +145,7 @@ const SearchPage = () => {
         foundEl,
         {
           boxShadow:
-            '0 0 0 3px rgba(74,222,128,0.2), 0 0 12px rgba(74,222,128,0.15)',
+            '0 0 0 3px rgba(0,255,17,0.2), 0 0 14px rgba(0,255,17,0.15)',
           duration: 0.6,
           ease: 'power1.inOut',
         },
@@ -147,7 +154,7 @@ const SearchPage = () => {
     }
   });
 
-  // ── Not-found ending: everything sinks and desaturates together ──
+  // ── Not-found ending: everything sinks and desaturates ──
   const animateNotFound = contextSafe((_frame: SearchFrame) => {
     const allEls = getExistingBarElements(bars.map((b) => b.id));
     clearActiveLine();
@@ -162,8 +169,8 @@ const SearchPage = () => {
     });
   });
 
+  // ── Main binary animation: uses xFraction + yLevel offsets from frame ──
   const animateBinaryFrame = contextSafe((frame: SearchFrame) => {
-    // Branch to special endings
     if (frame.isFinalFound) {
       animateFoundCelebration(frame);
       return;
@@ -173,66 +180,71 @@ const SearchPage = () => {
       return;
     }
 
+    const offsets = frame.offsets ?? {};
     const activeIds = frame.activeIds ?? [];
-    const leftDiscarded = frame.leftDiscardedIds ?? [];
-    const rightDiscarded = frame.rightDiscardedIds ?? [];
     const focusId = frame.focusId;
 
     const activeEls = getExistingBarElements(activeIds);
-    const leftEls = getExistingBarElements(leftDiscarded);
-    const rightEls = getExistingBarElements(rightDiscarded);
-
     const container = barsContainerRef.current;
     if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
     const containerWidth = containerRect.width;
 
-    // Each eliminated half slides out by 42% of container width (accumulates per round)
-    const SLIDE_AMOUNT = containerWidth * 0.42;
-
     const tl = gsap.timeline({
       defaults: { ease: 'power3.inOut', overwrite: 'auto' },
     });
 
-    // ── Step 1: Restore active bars — fully visible ──
-    tl.to(
-      activeEls,
-      { opacity: 1, scale: 1, filter: 'grayscale(0%)', duration: 0.25 },
-      0
-    );
+    // ── Apply xFraction / yLevel offsets to every bar ──
+    Object.keys(offsets).forEach((id) => {
+      const el = barRefs.current[id];
+      if (!el) return;
+      const { xFraction, yLevel } = offsets[id];
+      const targetX = xFraction * X_OFFSET_SCALE;
+      const targetY = -yLevel * Y_LEVEL_PX;
+      const isMid = id === focusId;
 
-    // ── Step 2a: Eliminated LEFT half peels away to -x, stagger right-to-left ──
-    if (leftEls.length > 0) {
       tl.to(
-        leftEls,
+        el,
         {
-          x: (_, el) => (gsap.getProperty(el, 'x') as number) - SLIDE_AMOUNT,
+          x: targetX,
+          y: targetY,
+          duration: isMid ? 0.45 : 0.65,
+          ease: isMid ? 'back.out(2)' : 'power3.inOut',
+          overwrite: 'auto',
+        },
+        0
+      );
+    });
+
+    // ── Restore active bars — fully visible ──
+    if (activeEls.length > 0) {
+      tl.to(
+        activeEls,
+        { opacity: 1, scale: 1, filter: 'grayscale(0%)', duration: 0.3 },
+        0
+      );
+    }
+
+    // ── Discarded bars fade out ──
+    const discardedEls = getExistingBarElements([
+      ...(frame.leftDiscardedIds ?? []),
+      ...(frame.rightDiscardedIds ?? []),
+    ]);
+    if (discardedEls.length > 0) {
+      tl.to(
+        discardedEls,
+        {
           opacity: 0.12,
           filter: 'grayscale(100%)',
-          duration: 0.7,
-          stagger: { amount: 0.12, from: 'end' },
+          duration: 0.55,
+          stagger: { amount: 0.1, from: 'edges' },
         },
         0
       );
     }
 
-    // ── Step 2b: Eliminated RIGHT half peels away to +x, stagger left-to-right ──
-    if (rightEls.length > 0) {
-      tl.to(
-        rightEls,
-        {
-          x: (_, el) => (gsap.getProperty(el, 'x') as number) + SLIDE_AMOUNT,
-          opacity: 0.12,
-          filter: 'grayscale(100%)',
-          duration: 0.7,
-          stagger: { amount: 0.12, from: 'start' },
-        },
-        0
-      );
-    }
-
-    // ── Step 3: After slide settles, recentre active range ──
+    // ── Re-centre active range after offsets settle ──
     tl.add(() => {
       if (activeEls.length === 0) return;
       const firstRect = activeEls[0].getBoundingClientRect();
@@ -240,30 +252,18 @@ const SearchPage = () => {
       const rangeCenterX = (firstRect.left + lastRect.right) / 2;
       const containerCenterX = containerRect.left + containerWidth / 2;
       const shiftX = containerCenterX - rangeCenterX;
+      if (Math.abs(shiftX) < 4) return; // skip tiny corrections
 
       gsap.to(activeEls, {
         x: (_, el) => (gsap.getProperty(el, 'x') as number) + shiftX,
-        duration: 0.55,
+        duration: 0.5,
         ease: 'power2.out',
         overwrite: 'auto',
-        stagger: { amount: 0.08, from: 'center' },
+        stagger: { amount: 0.07, from: 'center' },
       });
-    }, '+=0.18'); // slide needs ~0.7s; 0.18s offset gives it a head start
+    }, '+=0.2');
 
-    // ── Step 4: Lift the pivot bar — deliberate bounce ──
-    if (focusId) {
-      const focusEl = barRefs.current[focusId];
-      if (focusEl) {
-        tl.set(focusEl, { y: 0, scale: 1 }, 0);
-        tl.to(
-          focusEl,
-          { y: -20, scale: 1.14, duration: 0.4, ease: 'back.out(2)' },
-          0.28
-        );
-      }
-    }
-
-    // ── Step 5: Dotted underline — draws in, holds, fades out ──
+    // ── Dotted bracket line spans the active range ──
     if (activeLineRef.current && activeEls.length > 0) {
       requestAnimationFrame(() => {
         if (!activeLineRef.current) return;
@@ -272,7 +272,7 @@ const SearchPage = () => {
         const last = activeEls[activeEls.length - 1].getBoundingClientRect();
         const startX = first.left - containerRect.left;
         const endX = last.right - containerRect.left;
-        const yPos = first.top - containerRect.top - 14;
+        const yPos = first.top - containerRect.top - 16;
 
         const path = activeLineRef.current;
         gsap.killTweensOf(path);
@@ -289,14 +289,13 @@ const SearchPage = () => {
           { drawSVG: '0%', opacity: 1 },
           {
             drawSVG: '100%',
-            duration: 0.5,
+            duration: 0.55,
             ease: 'power2.out',
             onComplete: () => {
-              // hold for 1s then fade — line disappears well before the next frame
               gsap.to(path, {
                 opacity: 0,
                 duration: 0.45,
-                delay: 1.0,
+                delay: 1.1,
                 ease: 'power1.in',
               });
             },
@@ -310,8 +309,7 @@ const SearchPage = () => {
     const barElements = getExistingBarElements(bars.map((bar) => bar.id));
     if (barElements.length === 0) return;
     gsap.killTweensOf(barElements);
-    gsap.set(barElements, { clearProps: 'x,y,scale,opacity,filter' });
-    // Always clear the dotted line on reset
+    gsap.set(barElements, { clearProps: 'x,y,scale,opacity,filter,boxShadow' });
     clearActiveLine();
   });
 
@@ -320,6 +318,7 @@ const SearchPage = () => {
       nextMode === 'binary' ? 'binary' : 'linear';
     setMode(normalizedMode);
     setSearchParams({ mode: normalizedMode }, { replace: true });
+    setPhaseLabel('');
   };
 
   const finishTimeline = () => {
@@ -331,6 +330,7 @@ const SearchPage = () => {
     resetAnimation();
     timeline.clear().pause(0);
     resetBarTweens();
+    setPhaseLabel('');
 
     const result = searchAlgorithms[mode](bars, target);
     const labels: string[] = [];
@@ -345,8 +345,11 @@ const SearchPage = () => {
       timeline.call(
         () => {
           setBarStates(frame.states);
+          // Update phase label for all modes
+          if (frame.phaseLabel !== undefined) {
+            setPhaseLabel(frame.phaseLabel);
+          }
           if (mode === 'binary') {
-            // Wait for React to apply classes/styles before GSAP reads positions.
             requestAnimationFrame(() => {
               animateBinaryFrame(frame);
             });
@@ -364,6 +367,7 @@ const SearchPage = () => {
       clearActiveLine();
       if (mode !== 'binary') {
         resetBarTweens();
+        setPhaseLabel('');
       }
       if (!result.found) {
         toast.error('Value not found', {
@@ -409,54 +413,75 @@ const SearchPage = () => {
   };
 
   return (
-    <SharedLayout
-      inputValue={inputValue}
-      setInputValue={setInputValue}
-      searchValue={searchValue}
-      setSearchValue={setSearchValue}
-      handleInsert={handleInsert}
-      isPlaying={isPlaying}
-      handleSearch={handleSearch}
-      actionLabel="Search"
-      generateRandomArray={generateRandomArray}
-      algoMap={algoMap.map((algo) => ({ name: algo.name, value: algo.value }))}
-      onPlay={playSteps}
-      onPause={pauseSteps}
-      onNext={nextStep}
-      onPrev={prevStep}
-      selectedAlgorithm={mode}
-      onAlgorithmChange={updateMode}
-      speed={speed}
-      onSpeedChange={setPlaybackSpeed}
-      onSpeedIncrease={increaseSpeed}
-      onSpeedDecrease={decreaseSpeed}
-    >
-      <div className="w-full h-[900px] flex justify-center items-center max-w-[1600px] px-6 md:px-12 py-4 overflow-visible">
+    <div className="h-screen flex flex-col">
+      <SharedLayout
+        inputValue={inputValue}
+        setInputValue={setInputValue}
+        searchValue={searchValue}
+        setSearchValue={setSearchValue}
+        handleInsert={handleInsert}
+        isPlaying={isPlaying}
+        handleSearch={handleSearch}
+        actionLabel="Search"
+        generateRandomArray={generateRandomArray}
+        algoMap={algoMap.map((algo) => ({
+          name: algo.name,
+          value: algo.value,
+        }))}
+        onPlay={playSteps}
+        onPause={pauseSteps}
+        onNext={nextStep}
+        onPrev={prevStep}
+        selectedAlgorithm={mode}
+        onAlgorithmChange={updateMode}
+        speed={speed}
+        onSpeedChange={setPlaybackSpeed}
+        onSpeedIncrease={increaseSpeed}
+        onSpeedDecrease={decreaseSpeed}
+        legend={mode === 'binary' ? SEARCH_BINARY_LEGEND : SEARCH_LINEAR_LEGEND}
+      >
         <div
-          ref={barsContainerRef}
-          className="relative flex gap-2 justify-center items-end p-4 min-h-[260px] w-full bar-container overflow-visible"
+          className="w-full flex-1 flex flex-col justify-center items-center max-w-[1600px] px-6 md:px-12 py-4 overflow-visible"
+          style={{ minHeight: 'clamp(220px, 50vh, 560px)' }}
         >
-          {bars.map((bar) => (
-            <div
-              id={`bar-${bar.id}`}
-              ref={(node) => {
-                barRefs.current[bar.id] = node;
-              }}
-              key={bar.id}
-              data-flip-id={bar.id}
-              className={`bar w-10 rounded-sm text-center transition-colors duration-300 ${getBarColor(bar.id)}`}
-              style={{ height: `${Math.max(Math.abs(bar.value) * 4, 30)}px` }}
-            >
-              {bar.value}
-            </div>
-          ))}
-          {/* SVG overlay: full container size so dotted-line paths always fit */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-            <path ref={activeLineRef} />
-          </svg>
+          {/* Phase label */}
+          <div
+            className="mb-2 text-sm font-mono tracking-wide transition-all duration-500 min-h-[1.5rem] text-center"
+            style={{ color: 'var(--brand)', opacity: phaseLabel ? 1 : 0 }}
+          >
+            {phaseLabel}
+          </div>
+
+          <div
+            ref={barsContainerRef}
+            className="relative flex gap-2 justify-center items-end p-4 w-full bar-container overflow-visible"
+            style={{ minHeight: 'clamp(160px, 36vh, 340px)' }}
+          >
+            {bars.map((bar) => (
+              <div
+                id={`bar-${bar.id}`}
+                ref={(node) => {
+                  barRefs.current[bar.id] = node;
+                }}
+                key={bar.id}
+                data-flip-id={bar.id}
+                className={`bar w-5 sm:w-7 md:w-10 rounded-sm flex items-center justify-center font-mono text-[8px] sm:text-xs md:text-sm transition-colors duration-300 ${getBarColor(bar.id)}`}
+                style={{
+                  height: `${Math.max(Math.abs(Number(bar.value)) * 4, 30)}px`,
+                }}
+              >
+                {bar.value}
+              </div>
+            ))}
+            {/* SVG overlay for dotted bracket line */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+              <path ref={activeLineRef} />
+            </svg>
+          </div>
         </div>
-      </div>
-    </SharedLayout>
+      </SharedLayout>
+      <FloatingHelper text={phaseLabel} />
+    </div>
   );
 };
 

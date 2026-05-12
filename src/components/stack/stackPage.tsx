@@ -12,6 +12,8 @@ import {
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup.ts';
 import { toast } from 'sonner';
+import FloatingHelper from '../FloatingHelper';
+import ColorLegend, { STACK_LEGEND } from '../ColorLegend';
 
 type Status = 'popping' | 'pushing';
 type StackItem = { id: number; value: number; status: Status };
@@ -36,6 +38,7 @@ const StackPage = () => {
   const [algo, setAlgo] = useState('stack');
   const [input, setInput] = useState('');
   const [stack, setStack] = useState<StackItem[]>([]);
+  const [phaseLabel, setPhaseLabel] = useState('');
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -56,10 +59,11 @@ const StackPage = () => {
     );
 
   useEffect(() => {
-    if (stack.length === 0) generateRandom();
-  }, [stack]);
+    generateRandom();
+  }, []);
 
   const generateRandom = () => {
+    setPhaseLabel('Generated a random stack');
     setStack([]);
     itemRefs.current.clear();
     uid = 0;
@@ -111,11 +115,15 @@ const StackPage = () => {
       return;
     }
 
-    if (isFull)
+    if (isFull) {
+      setPhaseLabel('Cannot push: Stack is full');
       return toast('Stack is full!', {
         position: 'bottom-right',
         closeButton: true,
       });
+    }
+
+    setPhaseLabel(`Pushing ${value} onto the stack`);
     const item = makeItem(value);
     setStack((prev) => [item, ...prev]);
     setTimeout(() => {
@@ -130,12 +138,15 @@ const StackPage = () => {
   };
 
   const pop = () => {
-    if (isEmpty)
+    if (isEmpty) {
+      setPhaseLabel('Cannot pop: Stack is empty');
       return toast('Stack is empty!', {
         position: 'bottom-right',
         closeButton: true,
       });
+    }
     const target = activeS[0];
+    setPhaseLabel(`Popping ${target.value} from the top of the stack`);
     const el = getRef(target.id);
     if (!el) return;
     markExiting(target.id);
@@ -157,12 +168,16 @@ const StackPage = () => {
   };
 
   const peek = () => {
-    if (isEmpty)
+    if (isEmpty) {
+      setPhaseLabel('Cannot peek: Stack is empty');
       return toast('Stack is empty!', {
         position: 'bottom-right',
         closeButton: true,
       });
-    const el = getRef(activeS[0].id);
+    }
+    const target = activeS[0];
+    setPhaseLabel(`Peeking at top value: ${target.value}`);
+    const el = getRef(target.id);
     if (el) {
       gsap.fromTo(
         el,
@@ -183,11 +198,14 @@ const StackPage = () => {
   };
 
   const clear = () => {
-    if (isEmpty)
+    if (isEmpty) {
+      setPhaseLabel('Cannot clear: Stack is already empty');
       return toast('Stack is already empty!', {
         position: 'bottom-right',
         closeButton: true,
       });
+    }
+    setPhaseLabel('Clearing all elements from the stack');
     activeS.forEach((item, i) => {
       const el = getRef(item.id);
       if (!el) return;
@@ -218,11 +236,13 @@ const StackPage = () => {
 
   const monotonicStack = (value: number, isInc: boolean) => {
     if (activeS.length === 0) {
+      setPhaseLabel(`Stack is empty, pushing ${value}`);
       push(value, true);
       return;
     }
 
     if (isFull) {
+      setPhaseLabel('Cannot push: Stack is full');
       return toast('Stack full', {
         position: 'bottom-right',
         closeButton: true,
@@ -238,37 +258,51 @@ const StackPage = () => {
     }
 
     if (popCount === 0) {
+      setPhaseLabel(`Pushing ${value} (maintains monotonic property)`);
       push(value, true);
       return;
     }
 
+    setPhaseLabel(
+      `Popping ${popCount} item(s) to maintain monotonic property, then pushing ${value}`
+    );
+
     // 2. Animate the pops sequentially
     const itemsToPop = activeS.slice(0, popCount);
 
-    itemsToPop.forEach((target, i) => {
-      const el = getRef(target.id);
-      if (!el) return;
+    const processPops = async () => {
+      for (const target of itemsToPop) {
+        setPhaseLabel(
+          `${target.value} ${isInc ? '<' : '>'} ${value} breaks monotonic property. Popping.`
+        );
 
-      markExiting(target.id);
+        const el = getRef(target.id);
+        if (el) {
+          gsap.to(el, {
+            backgroundColor: 'var(--viz-bar-swapping-bg)',
+            duration: 0.3,
+          });
+          await new Promise((r) => setTimeout(r, 600)); // Breathing space
 
-      gsap.to(el, {
-        opacity: 0,
-        y: -60,
-        scale: 0.85,
-        duration: 0.38,
-        delay: i * 0.15, // Stagger the pop animations slightly
-        ease: 'power2.in',
-        onComplete: () => {
-          removeFromState(target.id);
-          itemRefs.current.delete(target.id);
-        },
-      });
-    });
+          markExiting(target.id);
+          await new Promise<void>((resolve) => {
+            gsap.to(el, {
+              opacity: 0,
+              y: -60,
+              scale: 0.85,
+              duration: 0.38,
+              ease: 'power2.in',
+              onComplete: () => {
+                removeFromState(target.id);
+                itemRefs.current.delete(target.id);
+                resolve();
+              },
+            });
+          });
+        }
+      }
 
-    // 3. Wait for the pops to finish, THEN push the new item
-    const totalPopAnimationTime = popCount * 150 + 380; // (delay * count) + duration
-
-    setTimeout(() => {
+      setPhaseLabel(`Pushing ${value} to Stack`);
       const item = makeItem(value);
       setStack((prev) => [item, ...prev]);
 
@@ -281,7 +315,9 @@ const StackPage = () => {
           { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: 'back.out(1.7)' }
         );
       }, 20); // Small DOM render delay
-    }, totalPopAnimationTime);
+    };
+
+    processPops();
   };
 
   const handleAlgoChange = (next: string) => {
@@ -339,7 +375,7 @@ const StackPage = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background font-audiowide">
       {/* Navbar */}
-      <div className="flex flex-row justify-between items-center h-16 px-6 border-0  b">
+      <div className="flex flex-wrap justify-between items-center min-h-14 py-3 px-6 gap-3 border-0">
         <div className="flex items-center gap-3">
           <Input
             className="input w-32"
@@ -356,11 +392,8 @@ const StackPage = () => {
           >
             Push
           </button>
-          <button className="btn-neutral" onClick={generateRandom}>
-            Generate Random
-          </button>
           <div className="w-px h-6 bg-border" />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {options
               .filter((o) => o !== 'push')
               .map((op) => (
@@ -377,6 +410,9 @@ const StackPage = () => {
                 </button>
               ))}
           </div>
+          <button className="btn-neutral" onClick={generateRandom}>
+            Generate Random
+          </button>
         </div>
 
         <Select value={algo} onValueChange={handleAlgoChange}>
@@ -458,6 +494,14 @@ const StackPage = () => {
           {activeS.length} / 10 items
         </span>
       </footer>
+      <FloatingHelper text={phaseLabel || 'Waiting for input...'} />
+      {/* Color legend */}
+      <div className="color-legend-fixed fixed bottom-0 left-1/2 -translate-x-1/2 z-40 rounded-t-lg">
+        <ColorLegend
+          entries={STACK_LEGEND}
+          className="px-4 py-1.5 rounded-t-lg"
+        />
+      </div>
     </div>
   );
 };

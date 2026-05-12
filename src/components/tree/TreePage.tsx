@@ -13,6 +13,8 @@ import * as d3 from 'd3';
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup';
 import { toast } from 'sonner';
+import FloatingHelper from '../FloatingHelper';
+import ColorLegend, { TREE_GRAPH_LEGEND } from '../ColorLegend';
 
 interface TreeNode {
   id: string;
@@ -463,24 +465,21 @@ const TreePage = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background font-audiowide">
       <div className="sticky top-0 z-30  border-0 bg-background backdrop-blur">
-        <div className="flex justify-between items-center">
-          <div className="flex justify-start items-center gap-2 px-3 py-2 mx-2">
+        <div className="flex flex-wrap justify-between items-center gap-2 py-2">
+          <div className="flex flex-wrap justify-start items-center gap-2 px-3 py-1 mx-2">
             <Input
-              className="input w-fit  px-2 py-1 "
+              className="input w-fit  px-2 max-w-[140px] py-1 "
               placeholder="Enter Number"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onInsert(inputValue)}
             />
-            <div className="flex justify-center items-center gap-2 text-white">
+            <div className="flex flex-wrap justify-center items-center gap-2 text-white">
               <button
                 className="btn-primary"
                 onClick={() => onInsert(inputValue)}
               >
                 Enter
-              </button>
-              <button className="btn-neutral bg-purple" onClick={onRandom}>
-                Generate Random
               </button>
               <button
                 className="btn-danger"
@@ -494,10 +493,13 @@ const TreePage = () => {
               >
                 Search
               </button>
+              <button className="btn-neutral bg-purple" onClick={onRandom}>
+                Generate Random
+              </button>
             </div>
           </div>
 
-          <div className="flex justify-center items-center gap-2">
+          <div className="flex flex-wrap justify-center items-center gap-2 px-3 py-1">
             <Select value={algo} onValueChange={setAlgo}>
               <SelectTrigger className="w-44 select-trigger">
                 <SelectValue placeholder="Select type" />
@@ -514,7 +516,7 @@ const TreePage = () => {
               </SelectContent>
             </Select>
 
-            <div className="flex justify-center items-center gap-2">
+            <div className="flex flex-wrap justify-center items-center gap-2">
               <Select
                 value={traversal}
                 onValueChange={(val) => {
@@ -597,6 +599,14 @@ const TreePage = () => {
             ))}
           </g>
         </svg>
+      </div>
+      <FloatingHelper />
+      {/* Color legend */}
+      <div className="color-legend-fixed fixed bottom-0 left-1/2 -translate-x-1/2 z-40 rounded-t-lg">
+        <ColorLegend
+          entries={TREE_GRAPH_LEGEND}
+          className="px-4 py-1.5 rounded-t-lg"
+        />
       </div>
     </div>
   );

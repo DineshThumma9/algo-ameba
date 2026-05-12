@@ -1,5 +1,4 @@
 import { Select } from '@radix-ui/react-select';
-import { Button } from '../ui/button';
 import {
   SelectContent,
   SelectGroup,
@@ -13,6 +12,8 @@ import * as d3 from 'd3';
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup';
 import { toast } from 'sonner';
+import FloatingHelper from '../FloatingHelper';
+import ColorLegend, { TREE_GRAPH_LEGEND } from '../ColorLegend';
 import algorithms from './graphConfig';
 import {
   runBFS,
@@ -36,10 +37,13 @@ const GraphPage = () => {
   const [startNode, setStartNode] = useState('');
   const [endNode, setEndNode] = useState('');
   const [numNodes, setNumNodes] = useState<string>('');
-
+  const [pathFollowed, setPathFollowed] = useState<number[]>([]);
   // Graph property states
   const [isDirected, setIsDirected] = useState(false);
   const [isWeighted, setIsWeighted] = useState(true);
+
+  const [nextExploring, setNextExploring] = useState<number[]>([]);
+  const [phaseLabel, setPhaseLabel] = useState(' ');
 
   const graphRef = useRef<SVGSVGElement>(null);
 
@@ -83,7 +87,10 @@ const GraphPage = () => {
   const onRun = contextSafe(() => {
     const startNum = parseInt(startNode);
     if (isNaN(startNum) && algorithms[algo].startNode) {
-      alert('Please enter valid start Node');
+      toast.error('Please enter a valid start node', {
+        position: 'bottom-right',
+        closeButton: true,
+      });
       return;
     }
 
@@ -121,12 +128,22 @@ const GraphPage = () => {
         animateEdges,
         shortestPathNodes,
         shortestPathEdges,
-      } = animationData;
+        exploringStates,
+        pathStates,
+      } = animationData as any;
 
       const tl = gsap.timeline();
 
       // 1. Reset everything to default colors
-      tl.to('circle', { fill: getCSSVar('--node'), duration: 0.2 });
+      tl.to('circle', {
+        fill: getCSSVar('--node'),
+        duration: 0.2,
+        onStart: () => {
+          setNextExploring([]);
+          setPathFollowed([]);
+          setPhaseLabel("Initializing Dijkstra\\'s algorithm...");
+        },
+      });
       tl.to(
         'line',
         { stroke: EDGE_BASE_COLOR, strokeWidth: 2, duration: 0.2 },
@@ -137,6 +154,12 @@ const GraphPage = () => {
       tl.to(`#node-${animateNodes[0]}`, {
         fill: getCSSVar('--compare'),
         duration: 0.2,
+        onStart: () => {
+          if (exploringStates && exploringStates[0])
+            setNextExploring(exploringStates[0]);
+          if (pathStates && pathStates[0]) setPathFollowed(pathStates[0]);
+          setPhaseLabel(`Starting at node ${animateNodes[0]}`);
+        },
       });
 
       // 3. EXPLORATION PHASE
@@ -157,6 +180,13 @@ const GraphPage = () => {
           fill: getCSSVar('--node-visited'),
           duration: 0.15,
           ease: 'power1.inOut',
+          onStart: () => {
+            if (exploringStates && exploringStates[i + 1])
+              setNextExploring(exploringStates[i + 1]);
+            if (pathStates && pathStates[i + 1])
+              setPathFollowed(pathStates[i + 1]);
+            setPhaseLabel(`Relaxing edge to node ${nextNode}`);
+          },
         });
       }
 
@@ -184,6 +214,9 @@ const GraphPage = () => {
                 fill: getCSSVar('--node-active'),
                 duration: 0.3,
                 ease: 'back.out(1.5)',
+                onStart: () => {
+                  setPhaseLabel(`Constructing shortest path: node ${nextNode}`);
+                },
               },
               '<'
             );
@@ -198,13 +231,19 @@ const GraphPage = () => {
       return;
     }
 
-    const { animateNodes, animateEdges } = animationData;
+    const { animateNodes, animateEdges, exploringStates, pathStates } =
+      animationData as any;
 
     const tl = gsap.timeline();
 
     tl.to('circle', {
       fill: getCSSVar('--node'),
       duration: 0.2,
+      onStart: () => {
+        setNextExploring([]);
+        setPathFollowed([]);
+        setPhaseLabel(`Initializing ${algo}...`);
+      },
     });
     tl.to(
       'line',
@@ -219,6 +258,12 @@ const GraphPage = () => {
     tl.to(`#node-${animateNodes[0]}`, {
       fill: getCSSVar('--compare'),
       duration: 0.2,
+      onStart: () => {
+        if (exploringStates && exploringStates[0])
+          setNextExploring(exploringStates[0]);
+        if (pathStates && pathStates[0]) setPathFollowed(pathStates[0]);
+        setPhaseLabel(`Starting at node ${animateNodes[0]}`);
+      },
     });
 
     for (let i = 0; i < animateEdges.length; i++) {
@@ -238,6 +283,13 @@ const GraphPage = () => {
         fill: getCSSVar('--node-visited'),
         duration: 0.4,
         ease: 'back.out(1.5)',
+        onStart: () => {
+          if (exploringStates && exploringStates[i + 1])
+            setNextExploring(exploringStates[i + 1]);
+          if (pathStates && pathStates[i + 1])
+            setPathFollowed(pathStates[i + 1]);
+          setPhaseLabel(`Exploring node ${nextNode}`);
+        },
       });
     }
   });
@@ -444,7 +496,7 @@ const GraphPage = () => {
 
   return (
     <div className="flex flex-col h-screen w-full shell">
-      <div className="nav w-full flex justify-between items-center mt-4 px-10">
+      <div className="nav w-full flex flex-wrap justify-between items-center gap-3 py-3 px-4 sm:px-8 mt-2">
         {/* Dynamic Inputs */}
         <div className="left-section flex flex-wrap justify-start items-center gap-2">
           {currentConfig.startNode && (
@@ -469,10 +521,10 @@ const GraphPage = () => {
             <button className="btn-primary">Enter</button>
           )}
 
-          <div className="flex gap-2 ml-4">
+          <div className="flex flex-wrap gap-1 ml-1">
             <input
-              className="input w-fit p-2"
-              placeholder="Number of Nodes"
+              className="input max-w-[140px]"
+              placeholder="No. of Nodes"
               value={numNodes}
               onChange={(e) => setNumNodes(e.target.value)}
             />
@@ -482,30 +534,33 @@ const GraphPage = () => {
           </div>
 
           {/* Dynamic Property Toggles */}
-          <div className="flex gap-2 ml-4">
+          <div className="flex flex-wrap gap-2 ml-2">
             {currentConfig.allowedNodeTypes.includes('directed') && (
-              <Button
-                variant={isDirected ? 'default' : 'outline'}
+              <button
+                className="btn-toggle"
+                data-active={isDirected ? 'true' : undefined}
                 onClick={() => setIsDirected(true)}
               >
                 Directed
-              </Button>
+              </button>
             )}
             {currentConfig.allowedNodeTypes.includes('undirected') && (
-              <Button
-                variant={!isDirected ? 'default' : 'outline'}
+              <button
+                className="btn-toggle"
+                data-active={!isDirected ? 'true' : undefined}
                 onClick={() => setIsDirected(false)}
               >
                 Undirected
-              </Button>
+              </button>
             )}
             {currentConfig.weighted && (
-              <Button
-                variant={isWeighted ? 'default' : 'outline'}
+              <button
+                className="btn-toggle"
+                data-active={isWeighted ? 'true' : undefined}
                 onClick={() => setIsWeighted(!isWeighted)}
               >
                 {isWeighted ? 'Weighted' : 'Unweighted'}
-              </Button>
+              </button>
             )}
           </div>
         </div>
@@ -536,7 +591,23 @@ const GraphPage = () => {
       </div>
 
       <div className="flex-grow w-full flex justify-center items-center overflow-hidden">
-        <svg ref={graphRef} className="w-full h-full min-h-[600px]"></svg>
+        <div className="flex flex-col justify-center items-center gap-2 w-full h-full relative">
+          <svg ref={graphRef} className="w-full h-full min-h-[600px]"></svg>
+        </div>
+      </div>
+
+      <FloatingHelper
+        text={phaseLabel}
+        nextExploring={nextExploring}
+        pathFollowed={pathFollowed}
+        algo={algo}
+      />
+      {/* Color legend */}
+      <div className="color-legend-fixed fixed bottom-0 left-1/2 -translate-x-1/2 z-40 rounded-t-lg">
+        <ColorLegend
+          entries={TREE_GRAPH_LEGEND}
+          className="px-4 py-1.5 rounded-t-lg"
+        />
       </div>
     </div>
   );

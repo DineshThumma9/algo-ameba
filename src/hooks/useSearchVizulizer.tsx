@@ -192,10 +192,14 @@ export const useSearchVizulizer = () => {
 
   const getBarColor = (id: string) => {
     switch (barStates[id]) {
+      case 'mid':
+        return 'viz-search-mid shadow-sm font-bold';
       case 'checking':
         return 'viz-search-check shadow-sm font-bold';
       case 'found':
         return 'viz-search-found shadow-sm font-bold';
+      case 'active':
+        return 'viz-search-active font-bold';
       case 'discarded':
         return 'viz-search-discard';
       default:

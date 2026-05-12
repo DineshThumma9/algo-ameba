@@ -14,7 +14,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      className="toaster group bg-background text-foreground"
+      className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,
@@ -22,12 +22,41 @@ const Toaster = ({ ...props }: ToasterProps) => {
         error: <OctagonXIcon className="size-4" />,
         loading: <Loader2Icon className="size-4 animate-spin" />,
       }}
+      toastOptions={{
+        unstyled: false,
+        classNames: {
+          toast:
+            "!font-mono !text-[13px] !rounded-lg !border !shadow-lg !backdrop-blur-md",
+          title: "!font-semibold !tracking-wide",
+          description: "!text-xs !opacity-80",
+          success:
+            "!bg-[var(--toast-bg)] !text-[var(--toast-fg)] !border-[var(--toast-success)]/30",
+          error:
+            "!bg-[var(--toast-bg)] !text-[var(--toast-fg)] !border-[var(--toast-error)]/30",
+          info: "!bg-[var(--toast-bg)] !text-[var(--toast-fg)] !border-[var(--toast-info)]/30",
+          warning:
+            "!bg-[var(--toast-bg)] !text-[var(--toast-fg)] !border-[var(--toast-border)]",
+          closeButton:
+            "!bg-[var(--toast-bg)] !border-[var(--toast-border)] !text-[var(--toast-fg)]",
+          actionButton:
+            "!bg-[var(--brand)] !text-black !font-semibold !text-xs",
+        },
+      }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          "--normal-bg": "var(--toast-bg)",
+          "--normal-text": "var(--toast-fg)",
+          "--normal-border": "var(--toast-border)",
+          "--success-bg": "var(--toast-bg)",
+          "--success-text": "var(--toast-fg)",
+          "--success-border": "var(--toast-success)",
+          "--error-bg": "var(--toast-bg)",
+          "--error-text": "var(--toast-fg)",
+          "--error-border": "var(--toast-error)",
+          "--info-bg": "var(--toast-bg)",
+          "--info-text": "var(--toast-fg)",
+          "--info-border": "var(--toast-info)",
+          "--border-radius": "0.5rem",
         } as React.CSSProperties
       }
       {...props}

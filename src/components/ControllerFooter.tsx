@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button.tsx';
 import {
   FastForwardIcon,
   MinusIcon,
@@ -41,18 +40,17 @@ const ControllerFooter = ({
   };
 
   return (
-    <footer className="footer flex justify-between items-center p-4 w-full">
+    <div className="flex justify-between items-center px-4 py-3 sm:px-6 w-full">
       {/* Speed Controls */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="size-8"
-          onClick={onSpeedIncrease}
-          disabled={!onSpeedIncrease}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onSpeedDecrease}
+          disabled={!onSpeedDecrease}
+          className="controller-btn"
+          aria-label="Decrease speed"
         >
-          <PlusIcon />
-        </Button>
+          <MinusIcon className="size-3.5" />
+        </button>
 
         <Slider
           value={[Math.round(speed * 100)]}
@@ -63,39 +61,57 @@ const ControllerFooter = ({
           min={25}
           max={300}
           step={5}
-          className="w-64 "
+          className="w-20 sm:w-32 md:w-48 controller-slider"
         />
 
-        <Button
-          variant="secondary"
-          size="icon"
-          className="size-8"
-          onClick={onSpeedDecrease}
-          disabled={!onSpeedDecrease}
+        <button
+          onClick={onSpeedIncrease}
+          disabled={!onSpeedIncrease}
+          className="controller-btn"
+          aria-label="Increase speed"
         >
-          <MinusIcon />
-        </Button>
+          <PlusIcon className="size-3.5" />
+        </button>
 
-        <span className="text-sm muted-text min-w-14 text-right">
+        <span
+          className="text-xs font-mono tracking-tight min-w-[3rem] text-right"
+          style={{ color: 'var(--muted-text)' }}
+        >
           {speed.toFixed(2)}x
         </span>
       </div>
 
       {/* Playback Controls */}
-      <div className="flex items-center gap-2 ">
-        <Button variant="secondary" size="icon" onClick={onPrev}>
-          <RewindIcon />
-        </Button>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={onPrev}
+          className="controller-btn"
+          aria-label="Previous step"
+        >
+          <RewindIcon className="size-3.5" />
+        </button>
 
-        <Button variant="secondary" size="icon" onClick={handlePlayPause}>
-          {isPlaying ? <PauseIcon /> : <PlayIcon />}
-        </Button>
+        <button
+          onClick={handlePlayPause}
+          className="controller-play-btn"
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+        >
+          {isPlaying ? (
+            <PauseIcon className="size-4" />
+          ) : (
+            <PlayIcon className="size-4 ml-0.5" />
+          )}
+        </button>
 
-        <Button variant="secondary" size="icon" onClick={onNext}>
-          <FastForwardIcon />
-        </Button>
+        <button
+          onClick={onNext}
+          className="controller-btn"
+          aria-label="Next step"
+        >
+          <FastForwardIcon className="size-3.5" />
+        </button>
       </div>
-    </footer>
+    </div>
   );
 };
 

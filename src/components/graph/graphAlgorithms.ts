@@ -29,12 +29,17 @@ function runBFS(
 ) {
   const animateNodes: number[] = [];
   const animateEdges: { source: number; target: number }[] = [];
+  const exploringStates: number[][] = [];
+  const pathStates: number[][] = [];
   const visited = new Set<number>();
 
   const queue: number[] = [startId];
+  const path: number[] = [startId];
 
   animateNodes.push(startId);
   visited.add(startId);
+  exploringStates.push([...queue]);
+  pathStates.push([...path]);
 
   while (queue.length > 0) {
     const node = queue.shift()!;
@@ -47,14 +52,17 @@ function runBFS(
       if (!visited.has(edge.target)) {
         visited.add(edge.target);
         queue.push(edge.target);
+        path.push(edge.target);
 
         animateEdges.push({ source: node, target: edge.target });
         animateNodes.push(edge.target);
+        exploringStates.push([...queue]);
+        pathStates.push([...path]);
       }
     }
   }
 
-  return { animateNodes, animateEdges };
+  return { animateNodes, animateEdges, exploringStates, pathStates };
 }
 
 function runDFS(
@@ -64,17 +72,21 @@ function runDFS(
 ) {
   const animateNodes: number[] = [];
   const animateEdges: { source: number; target: number }[] = [];
+  const exploringStates: number[][] = [];
+  const pathStates: number[][] = [];
   const visited = new Set<number>();
 
   const stack: { child: number; parent: number | null }[] = [
     { child: startId, parent: null },
   ];
+  const path: number[] = [];
 
   while (stack.length > 0) {
     const { child, parent } = stack.pop()!;
 
     if (!visited.has(child)) {
       visited.add(child);
+      path.push(child);
 
       // Record for GSAP
       animateNodes.push(child);
@@ -82,7 +94,11 @@ function runDFS(
         animateEdges.push({ source: parent, target: child });
       }
 
-      if (child === targetId) break;
+      if (child === targetId) {
+        exploringStates.push(stack.map((s) => s.child));
+        pathStates.push([...path]);
+        break;
+      }
 
       const nei = adj.get(child) || [];
       // Loop backwards to traverse left-to-right visually
@@ -92,10 +108,12 @@ function runDFS(
           stack.push({ child: edge.target, parent: child });
         }
       }
+      exploringStates.push(stack.map((s) => s.child));
+      pathStates.push([...path]);
     }
   }
 
-  return { animateNodes, animateEdges };
+  return { animateNodes, animateEdges, exploringStates, pathStates };
 }
 
 // ... other imports
@@ -103,6 +121,8 @@ function runDFS(
 function runPrims(adj: Map<number, AdjEdge[]>, startNum: number) {
   const animateNodes: number[] = [];
   const animateEdges: { source: number; target: number }[] = [];
+  const exploringStates: number[][] = [];
+  const pathStates: number[][] = [];
 
   const edges = new MinPriorityQueue<{
     curr: number;
@@ -112,11 +132,15 @@ function runPrims(adj: Map<number, AdjEdge[]>, startNum: number) {
   const visited = new Set<number>();
   animateNodes.push(startNum);
   const mst: { curr: number; parent: number; weight: number }[] = [];
+  const path: number[] = [startNum];
 
   visited.add(startNum);
   for (const edge of adj.get(startNum) || []) {
     edges.enqueue({ curr: edge.target, parent: startNum, weight: edge.weight });
   }
+
+  exploringStates.push(edges.toArray().map((e) => e.curr));
+  pathStates.push([...path]);
 
   while (edges.size() > 0 && visited.size < adj.size) {
     let dequeued = edges.pop();
@@ -127,6 +151,7 @@ function runPrims(adj: Map<number, AdjEdge[]>, startNum: number) {
     if (!visited.has(curr)) {
       visited.add(curr);
       animateNodes.push(curr);
+      path.push(curr);
 
       if (parent) {
         mst.push({ curr: curr, parent: parent, weight: weight });
@@ -142,10 +167,13 @@ function runPrims(adj: Map<number, AdjEdge[]>, startNum: number) {
           });
         }
       }
+
+      exploringStates.push(edges.toArray().map((e) => e.curr));
+      pathStates.push([...path]);
     }
   }
 
-  return { animateNodes, animateEdges };
+  return { animateNodes, animateEdges, exploringStates, pathStates };
 }
 
 function runDijstras(
@@ -155,6 +183,9 @@ function runDijstras(
 ) {
   const animateNodes: number[] = [];
   const animateEdges: { source: number; target: number }[] = [];
+  const exploringStates: number[][] = [];
+  const pathStates: number[][] = [];
+  const path: number[] = [];
 
   const dist = new Map<number, number>();
   // NEW: Keep track of the best parent for the final path reconstruction
@@ -182,6 +213,7 @@ function runDijstras(
     if (visited.has(curr)) continue;
 
     visited.add(curr);
+    path.push(curr);
 
     // Record exploration for GSAP
     animateNodes.push(curr);
@@ -189,7 +221,11 @@ function runDijstras(
       animateEdges.push({ source: parent, target: curr });
     }
 
-    if (curr === targetId) break;
+    if (curr === targetId) {
+      exploringStates.push(pq.toArray().map((e) => e.curr));
+      pathStates.push([...path]);
+      break;
+    }
 
     const nei = adj.get(curr) || [];
     for (const edge of nei) {
@@ -203,6 +239,9 @@ function runDijstras(
         }
       }
     }
+
+    exploringStates.push(pq.toArray().map((e) => e.curr));
+    pathStates.push([...path]);
   }
 
   // NEW: Reconstruct the Shortest Path!
@@ -228,13 +267,22 @@ function runDijstras(
   }
 
   // Return the new path arrays to GSAP
-  return { animateNodes, animateEdges, shortestPathNodes, shortestPathEdges };
+  return {
+    animateNodes,
+    animateEdges,
+    shortestPathNodes,
+    shortestPathEdges,
+    exploringStates,
+    pathStates,
+  };
 }
 
 function runKruskals(adj: Map<number, AdjEdge[]>) {
   // Use a Set to easily manage unique nodes getting animated
   const animatedNodesSet = new Set<number>();
   const animateEdges: { source: number; target: number }[] = [];
+  const exploringStates: number[][] = [];
+  const pathStates: number[][] = [];
   const uf = new UnionFind(adj.size);
 
   const edges: { source: number; target: number; weight: number }[] = [];
@@ -258,6 +306,9 @@ function runKruskals(adj: Map<number, AdjEdge[]>) {
       animatedNodesSet.add(source);
       animatedNodesSet.add(target);
 
+      exploringStates.push([]); // Kruskal's doesn't have a traditional queue
+      pathStates.push(Array.from(animatedNodesSet));
+
       if (animateEdges.length === adj.size - 1) {
         break;
       }
@@ -268,6 +319,8 @@ function runKruskals(adj: Map<number, AdjEdge[]>) {
   return {
     animateNodes: Array.from(animatedNodesSet),
     animateEdges,
+    exploringStates,
+    pathStates,
   };
 }
 

@@ -15,8 +15,8 @@ import gsap from '../../gsapSetup';
 import { toast } from 'sonner';
 import { pushToHeap, popFromHeap, buildTreeFromArray } from './heapAlgorithms';
 import { type HeapNode, type RenderNode, type RenderEdge } from './heapTypes';
-import { Draggable } from 'gsap/Draggable';
-import { EyeIcon, EyeOffIcon } from 'lucide-react';
+import FloatingHelper from '../FloatingHelper';
+import ColorLegend, { HEAP_LEGEND } from '../ColorLegend';
 
 const HeapPage = () => {
   const MAX_HEAP_SIZE = 15;
@@ -29,8 +29,6 @@ const HeapPage = () => {
 
   const algorithms: string[] = ['Min-Heap', 'Max-Heap'];
 
-  const [showHelper, setShowHelper] = useState<boolean>(true);
-
   const heapRoot = useMemo(() => buildTreeFromArray(heap), [heap]);
 
   useEffect(() => {
@@ -38,13 +36,6 @@ const HeapPage = () => {
       onRandom();
     }
   }, [heap]);
-
-  useGSAP(() => {
-    Draggable.create('.draggable', {
-      type: 'x,y',
-      bounds: '.viz-canvas',
-    });
-  });
 
   const { nodes, edges } = useMemo(() => {
     if (!heapRoot)
@@ -88,6 +79,9 @@ const HeapPage = () => {
     newIndex?: number;
   } | null>(null);
 
+  // Stores the final (post-swap) heap to commit after push animation finishes
+  const finalHeapRef = useRef<number[] | null>(null);
+
   const { contextSafe } = useGSAP(
     () => {
       if (nodes.length === 0) return;
@@ -124,6 +118,11 @@ const HeapPage = () => {
     const heapTimeline = gsap.timeline({
       onComplete: () => {
         pendingAnimationRef.current = null;
+        // After push animation, commit the final (post-swap) heap state
+        if (pending.type === 'push' && finalHeapRef.current) {
+          setHeap(finalHeapRef.current);
+          finalHeapRef.current = null;
+        }
         onComplete?.();
       },
     });
@@ -293,7 +292,7 @@ const HeapPage = () => {
 
     if (values.length === 1) {
       const num = values[0];
-      const { newHeap, animateNodes } = pushToHeap(
+      const { newHeap, preSwapHeap, animateNodes } = pushToHeap(
         heap,
         num,
         algo === 'Max-Heap'
@@ -319,11 +318,15 @@ const HeapPage = () => {
       pendingAnimationRef.current = {
         type: 'push',
         animateNodes,
-        newIndex: newHeap.length - 1,
+        newIndex: preSwapHeap.length - 1,
       };
 
+      // Store the final heap; commit it after animation completes
+      finalHeapRef.current = newHeap;
+
+      // Render the pre-swap state so the animation can visually swap to the correct final state
       gsap.delayedCall(0.1, () => {
-        setHeap(newHeap);
+        setHeap(preSwapHeap);
       });
 
       setInputValue('');
@@ -447,37 +450,32 @@ const HeapPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background font-audiowide">
-      <div className="sticky w-full backdrop-blur z-10">
-        <div className="flex justify-between items-center">
-          <div className="flex justify-start items-center gap-2 px-3 py-2 mx-2">
-            <Input
-              className="input w-[400px]"
-              placeholder="Enter Number"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && onInsert(inputValue)}
-            />
-            <div className="flex justify-center items-center gap-2 text-white">
-              <button
-                className="btn-primary"
-                onClick={() => onInsert(inputValue)}
-              >
-                Heappush
-              </button>
-              <button className="btn-neutral" onClick={onRandom}>
-                Generate Random
-              </button>
-              <button className="btn-danger" onClick={onDelete}>
-                Heappop (Root)
-              </button>
-              <button className="btn-success">Heapify</button>
-            </div>
-          </div>
+      <div className="sticky w-full backdrop-blur z-10 border-b border-border/40">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2">
+          {/* ── Left: Input + action buttons ── */}
+          <Input
+            className="input w-[160px]"
+            placeholder="Enter number"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onInsert(inputValue)}
+          />
 
-          <div className="flex justify-center items-center gap-2">
+          <button className="btn-primary" onClick={() => onInsert(inputValue)}>
+            Heappush
+          </button>
+          <button className="btn-danger" onClick={onDelete}>
+            Heappop
+          </button>
+          <button className="btn-neutral" onClick={onRandom}>
+            Random
+          </button>
+
+          {/* ── Right: Algo select + Run (pushed to far end) ── */}
+          <div className="flex items-center gap-2 ml-auto">
             <Select value={algo} onValueChange={setAlgo}>
-              <SelectTrigger className="w-44 select-trigger">
-                <SelectValue placeholder="Select type" />
+              <SelectTrigger className="w-40 select-trigger">
+                <SelectValue placeholder="Heap type" />
               </SelectTrigger>
               <SelectContent className="select-content">
                 <SelectGroup>
@@ -491,22 +489,9 @@ const HeapPage = () => {
               </SelectContent>
             </Select>
 
-            <div className="flex justify-center items-center gap-2">
-              <button
-                className="btn-success h-fit px-4 py-2"
-                onClick={() => onRandom()}
-              >
-                Run
-              </button>
-              {!showHelper && (
-                <button
-                  className="btn-neutral h-fit px-4 py-2 flex items-center gap-2 hidden"
-                  onClick={() => setShowHelper(true)}
-                >
-                  <EyeIcon className="w-4 h-4" /> Helper
-                </button>
-              )}
-            </div>
+            <button className="btn-success" onClick={onRandom}>
+              Run
+            </button>
           </div>
         </div>
       </div>
@@ -563,32 +548,14 @@ const HeapPage = () => {
             </g>
           </svg>
 
-          {showHelper && (
-            <div
-              className="draggable flex flex-col w-fit h-fit px-6 py-4 m-3 bg-background absolute z-10 rounded-lg top-4 right-4 border-2 border-brand shadow-md shadow-brand/40 cursor-move hidden"
-              style={{ touchAction: 'none' }}
-            >
-              <div
-                className="flex w-full justify-end"
-                onClick={() => setShowHelper(false)}
-              >
-                <EyeOffIcon className="w-5 h-5 cursor-pointer text-muted-foreground hover:text-foreground transition-colors" />
-              </div>
-              <div className="flex justify-center items-center gap-3 text-center mt-2">
-                <img
-                  src="/Ameba.svg"
-                  alt="ameba"
-                  className="w-10 h-10 drop-shadow-md"
-                />
-                <h3
-                  className="font-normal text-foreground text-lg leading-tight"
-                  id="helper-text"
-                >
-                  Waiting for input...
-                </h3>
-              </div>
-            </div>
-          )}
+          <FloatingHelper />
+          {/* Color legend */}
+          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 mb-0.5">
+            <ColorLegend
+              entries={HEAP_LEGEND}
+              className="px-4 py-1.5 rounded-t-lg"
+            />
+          </div>
         </div>
       </div>
     </div>

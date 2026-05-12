@@ -12,6 +12,8 @@ import {
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup.ts';
 import { toast } from 'sonner';
+import FloatingHelper from '../FloatingHelper';
+import ColorLegend, { QUEUE_LEGEND } from '../ColorLegend';
 
 type QueueItem = { id: number; value: number };
 
@@ -25,14 +27,8 @@ const algosOptionMap: Record<string, string[]> = {
     'peek',
     'clear',
   ],
-  'monotonic queue': [
-    'enqueueFirst',
-    'enqueueLast',
-    'dequeueFirst',
-    'dequeueLast',
-    'peek',
-    'clear',
-  ],
+  'monotonic inc queue': ['enqueue', 'dequeue', 'peek', 'clear'],
+  'monotonic dec queue': ['enqueue', 'dequeue', 'peek', 'clear'],
   'circular queue': ['enqueue', 'dequeue', 'peek', 'clear'],
 };
 
@@ -43,7 +39,7 @@ const QueuePage = () => {
   const [input, setInput] = useState('');
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
-
+  const [phaseLabel, setPhaseLabel] = useState<string>();
   const queueContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const nextId = useRef(0);
@@ -56,10 +52,8 @@ const QueuePage = () => {
   const { contextSafe } = useGSAP({ scope: queueContainerRef });
 
   useEffect(() => {
-    if (queue.length == 0) {
-      generateRandomArray();
-    }
-  }, [queue]);
+    generateRandomArray();
+  }, []);
 
   const generateRandomArray = () => {
     // Clear queue first
@@ -102,10 +96,94 @@ const QueuePage = () => {
     setQueue([]);
     setRemovingIds(new Set());
     itemRefs.current.clear();
+    nextId.current = 0;
     toast(`Switched to ${algo}`, {
       position: 'bottom-right',
       closeButton: true,
     });
+  };
+
+  const compare = (a: number, b: number, isIncreasing: boolean) => {
+    return isIncreasing ? a > b : a < b;
+  };
+
+  const monotonicEnqueue = (value: number, isInc: boolean) => {
+    if (active.length === 0) {
+      enqueue([value], false);
+      return;
+    }
+
+    if (active.length >= MAX_QUEUE_SIZE) {
+      toast.error(`Queue is full!`, {
+        position: 'bottom-right',
+        closeButton: true,
+      });
+      return;
+    }
+
+    let popCount = 0;
+    while (
+      popCount < active.length &&
+      compare(active[active.length - 1 - popCount].value, value, isInc)
+    ) {
+      popCount++;
+    }
+
+    if (popCount === 0) {
+      enqueue([value], false);
+      return;
+    }
+
+    const itemsToPop = active.slice(active.length - popCount);
+
+    const processPops = async () => {
+      // itemsToPop is in order from front to back of the chunk.
+      // We want to pop from the very back of the active queue first.
+      const toPopReversed = [...itemsToPop].reverse();
+
+      for (const target of toPopReversed) {
+        setPhaseLabel(
+          `${target.value} ${isInc ? '<' : '>'} ${value} breaks monotonic property. Popping.`
+        );
+
+        const el = itemRefs.current.get(target.id);
+        if (el) {
+          gsap.to(el, {
+            backgroundColor: 'var(--viz-bar-swapping-bg)',
+            duration: 0.3,
+          });
+          await new Promise((r) => setTimeout(r, 600)); // Breathing space
+
+          setRemovingIds((prev) => new Set([...prev, target.id]));
+          await new Promise<void>((resolve) => {
+            gsap.to(el, {
+              opacity: 0,
+              x: 80,
+              scale: 0.85,
+              duration: 0.4,
+              ease: 'power2.in',
+              onComplete: () => {
+                setQueue((prev) =>
+                  prev.filter((item) => item.id !== target.id)
+                );
+                setRemovingIds((prev) => {
+                  const n = new Set(prev);
+                  n.delete(target.id);
+                  return n;
+                });
+                itemRefs.current.delete(target.id);
+                resolve();
+              },
+            });
+          });
+        }
+      }
+
+      setPhaseLabel(`Enqueuing ${value} to Queue`);
+      enqueue([value], false);
+    };
+
+    processPops();
   };
 
   const enqueue = (values: number[], toFront = false) => {
@@ -211,6 +289,7 @@ const QueuePage = () => {
           if (idx === active.length - 1) {
             setQueue([]);
             setRemovingIds(new Set());
+            nextId.current = 0;
             toast('Queue cleared', {
               position: 'bottom-right',
               closeButton: true,
@@ -236,8 +315,25 @@ const QueuePage = () => {
           });
           return;
         }
-        enqueue(values, false);
-        setInput('');
+
+        if (
+          selectedAlgo === 'monotonic inc queue' ||
+          selectedAlgo === 'monotonic dec queue'
+        ) {
+          if (values.length > 1) {
+            toast(
+              'Monotonic animations work best one at a time. Processing first item only.',
+              {
+                position: 'bottom-right',
+              }
+            );
+          }
+          monotonicEnqueue(values[0], selectedAlgo === 'monotonic inc queue');
+          setInput(values.slice(1).join(', '));
+        } else {
+          enqueue(values, false);
+          setInput('');
+        }
         break;
       }
       case 'enqueueFirst': {
@@ -277,8 +373,8 @@ const QueuePage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col font-audiowide">
       {/* Navbar */}
-      <div className="flex flex-row justify-between items-center h-16 px-6 border-0">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap justify-between items-center min-h-14 py-3 px-6 gap-3 border-0">
+        <div className="flex flex-wrap items-center gap-3">
           <Input
             className="input w-32"
             placeholder="value"
@@ -394,7 +490,11 @@ const QueuePage = () => {
               </div>
               {/* Index label */}
               <span className="text-[10px] font-mono mt-1 muted-text">
-                [{idx}]
+                [
+                {selectedAlgo === 'circular queue'
+                  ? item.id % MAX_QUEUE_SIZE
+                  : idx}
+                ]
               </span>
             </div>
           ))}
@@ -417,6 +517,14 @@ const QueuePage = () => {
           {activeLen} / 10 items
         </span>
       </footer>
+      <FloatingHelper text={phaseLabel} />
+      {/* Color legend */}
+      <div className="color-legend-fixed fixed bottom-0 left-1/2 -translate-x-1/2 z-40 rounded-t-lg">
+        <ColorLegend
+          entries={QUEUE_LEGEND}
+          className="px-4 py-1.5 rounded-t-lg"
+        />
+      </div>
     </div>
   );
 };

@@ -892,6 +892,8 @@ const LandingPage = () => {
         </div>
       </section>
 
+      <section></section>
+
       {/* ─── HOW IT WORKS ──────────────────────────────────────────────── */}
       <section
         ref={howItWorksRef}
