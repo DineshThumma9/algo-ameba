@@ -1154,7 +1154,8 @@ const Homepage = () => {
           ref={searchCardRef}
           onMouseEnter={playSearchHover}
           onMouseLeave={resetSearchLetters}
-          className="flex flex-col w-full justify-center items-center p-3 md:p-5 card rounded-lg"
+          onClick={() => navigate('/search')}
+          className="flex flex-col w-full justify-center items-center p-3 md:p-5 card rounded-lg cursor-pointer"
         >
           <div className="flex p-1 m-2 flex-row align-center content-center justify-center gap-2 items-stretch border-2 rounded-sm border-wh w-full min-h-[90px]">
             {['S', 'E', 'A', 'R', 'C', 'H'].map((char) => (
@@ -1168,9 +1169,7 @@ const Homepage = () => {
             ))}
           </div>
           <div className="card-name">
-            <h1 className="card-text" onClick={() => navigate('/search')}>
-              Search
-            </h1>
+            <h1 className="card-text">Search</h1>
           </div>
         </div>
 
@@ -1180,7 +1179,8 @@ const Homepage = () => {
             ref={stackCardRef}
             onMouseEnter={playStackHover}
             onMouseLeave={resetStackHover}
-            className="flex-1 flex flex-col justify-between items-center p-3 md:p-5 card rounded-lg min-h-[250px] md:min-h-[340px]"
+            onClick={() => navigate('/stack')}
+            className="flex-1 flex flex-col justify-between items-center p-3 md:p-5 card rounded-lg min-h-[250px] md:min-h-[340px] cursor-pointer"
           >
             {/* Stack items: fixed width + explicit height so they never squash */}
             <div className="flex flex-col gap-2 justify-center items-center w-full flex-1 py-2">
@@ -1191,9 +1191,7 @@ const Homepage = () => {
               ))}
             </div>
             <div className="self-start w-full p-2">
-              <h1 className="card-text" onClick={() => navigate('/stack')}>
-                Stack
-              </h1>
+              <h1 className="card-text">Stack</h1>
             </div>
           </div>
 
@@ -1201,7 +1199,8 @@ const Homepage = () => {
             ref={sortCardRef}
             onMouseEnter={playSortingHover}
             onMouseLeave={resetSortingBars}
-            className="flex-1 flex flex-col justify-between items-center p-3 md:p-5 card rounded-lg min-h-[250px] md:min-h-[340px]"
+            onClick={() => navigate('/sort')}
+            className="flex-1 flex flex-col justify-between items-center p-3 md:p-5 card rounded-lg min-h-[250px] md:min-h-[340px] cursor-pointer"
           >
             <div className="flex flex-row rounded-lg items-end justify-center gap-2 w-full flex-1 py-2">
               {sortingBars.map((bar) => (
@@ -1216,9 +1215,7 @@ const Homepage = () => {
               ))}
             </div>
             <div className="self-start w-full p-2">
-              <h1 className="card-text" onClick={() => navigate('/sort')}>
-                Sorting
-              </h1>
+              <h1 className="card-text">Sorting</h1>
             </div>
           </div>
         </div>
@@ -1228,7 +1225,8 @@ const Homepage = () => {
           ref={queueCardRef}
           onMouseEnter={playQueueHover}
           onMouseLeave={resetQueueHover}
-          className="flex flex-col w-full justify-center items-center p-3 md:p-5 card rounded-lg overflow-hidden"
+          onClick={() => navigate('/queue')}
+          className="flex flex-col w-full justify-center items-center p-3 md:p-5 card rounded-lg overflow-hidden cursor-pointer"
         >
           <div className="flex p-1 my-2 mx-0 md:m-2 flex-row align-center content-center justify-center gap-1 md:gap-2 items-center  w-full h-[75px] rounded-sm overflow-x-auto overflow-y-hidden">
             {'QUEUE'.split('').map((ch) => (
@@ -1238,9 +1236,7 @@ const Homepage = () => {
             ))}
           </div>
           <div className="card-name">
-            <h1 className="card-text" onClick={() => navigate('/queue')}>
-              Queue
-            </h1>
+            <h1 className="card-text">Queue</h1>
           </div>
         </div>
 
@@ -1250,7 +1246,8 @@ const Homepage = () => {
             ref={treeCardRef}
             onMouseEnter={playTreeHover}
             onMouseLeave={resetTreeHover}
-            className="flex-1 flex flex-col w-full justify-between items-center p-3 md:p-5 card rounded-lg min-h-[300px] md:min-h-[400px]"
+            onClick={() => navigate('/tree')}
+            className="flex-1 flex flex-col w-full justify-between items-center p-3 md:p-5 card rounded-lg min-h-[300px] md:min-h-[400px] cursor-pointer"
           >
             <div
               ref={containerRef}
@@ -1264,9 +1261,7 @@ const Homepage = () => {
               ></svg>
             </div>
             <div className="card-name">
-              <h1 className="card-text" onClick={() => navigate('/tree')}>
-                Tree
-              </h1>
+              <h1 className="card-text">Tree</h1>
             </div>
           </div>
 
@@ -1274,7 +1269,8 @@ const Homepage = () => {
             ref={heapCardRef}
             onMouseEnter={playHeapHover}
             onMouseLeave={resetHeapHover}
-            className="flex-1 flex flex-col w-full justify-between items-center p-3 md:p-5 card rounded-lg min-h-[300px] md:min-h-[400px]"
+            onClick={() => navigate('/heap')}
+            className="flex-1 flex flex-col w-full justify-between items-center p-3 md:p-5 card rounded-lg min-h-[300px] md:min-h-[400px] cursor-pointer"
           >
             <div className="h-full w-full flex flex-col justify-center items-center overflow-hidden">
               <svg
@@ -1296,9 +1292,7 @@ const Homepage = () => {
               </div>
             </div>
             <div className="card-name">
-              <h1 className="card-text" onClick={() => navigate('/heap')}>
-                Heap
-              </h1>
+              <h1 className="card-text">Heap</h1>
             </div>
           </div>
         </div>
@@ -1308,7 +1302,8 @@ const Homepage = () => {
           ref={graphCardRef}
           onMouseEnter={playGraphHover}
           onMouseLeave={resetGraphHover}
-          className="flex flex-col justify-center items-center w-full min-h-[350px] md:h-[500px] rounded-sm card relative overflow-hidden"
+          onClick={() => navigate('/graph')}
+          className="flex flex-col justify-center items-center w-full min-h-[350px] md:h-[500px] rounded-sm card relative overflow-hidden cursor-pointer"
         >
           <svg
             viewBox="0 0 1000 400"
@@ -1364,9 +1359,7 @@ const Homepage = () => {
           </svg>
 
           <div className="card-name absolute bottom-2 left-2">
-            <h1 className="card-text w-fit" onClick={() => navigate('/graph')}>
-              Graph
-            </h1>
+            <h1 className="card-text w-fit">Graph</h1>
           </div>
         </div>
 
@@ -1375,7 +1368,8 @@ const Homepage = () => {
           ref={linkedListCardRef}
           onMouseEnter={playLinkedListHover}
           onMouseLeave={resetLinkedListHover}
-          className="relative flex flex-col justify-between items-center h-[250px] w-full card rounded-lg p-3 md:p-5 overflow-hidden"
+          onClick={() => navigate('/linkedlist')}
+          className="relative flex flex-col justify-between items-center h-[250px] w-full card rounded-lg p-3 md:p-5 overflow-hidden cursor-pointer"
         >
           <div
             ref={linkedListPointerRef}
@@ -1396,9 +1390,7 @@ const Homepage = () => {
           </div>
 
           <div className="card-name">
-            <h1 className="card-text" onClick={() => navigate('/linkedlist')}>
-              Linked List
-            </h1>
+            <h1 className="card-text">Linked List</h1>
           </div>
         </div>
       </section>
