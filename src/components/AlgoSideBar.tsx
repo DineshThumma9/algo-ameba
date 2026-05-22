@@ -10,6 +10,8 @@ import go from 'react-syntax-highlighter/dist/esm/languages/prism/go';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useTheme } from '@/components/ui/theme-provider';
 import oneLight from 'react-syntax-highlighter/dist/cjs/styles/prism/one-light';
+import { useGSAP } from '@gsap/react';
+import gsap from '@/gsapSetup';
 import type { AlgoInfo } from '@/constants/algoInfo';
 
 (SyntaxHighlighter as any).registerLanguage('python', python);
@@ -56,6 +58,7 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
     (theme === 'system' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches);
 
+  const sidebarRef = useRef<HTMLElement>(null);
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(DEFAULT_WIDTH);
@@ -99,8 +102,62 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
       });
   };
 
+  // ── Staggered entrance when sidebar opens or algoInfo changes ────────────
+  useGSAP(
+    () => {
+      if (!isOpen || !algoInfo || !sidebarRef.current) return;
+
+      const tl = gsap.timeline({
+        defaults: { ease: 'power2.out', duration: 0.32 },
+      });
+
+      // Header: eyebrow + title slide in from left
+      tl.fromTo(
+        '.algo-sidebar-eyebrow, .algo-sidebar-title',
+        { autoAlpha: 0, x: -14 },
+        { autoAlpha: 1, x: 0, stagger: 0.06 }
+      );
+
+      // Complexity block: items fade up with a tiny stagger
+      tl.fromTo(
+        '.algo-complexity-item',
+        { autoAlpha: 0, y: 10 },
+        { autoAlpha: 1, y: 0, stagger: 0.08 },
+        '-=0.18'
+      );
+
+      // Description paragraph
+      tl.fromTo(
+        '.algo-sidebar-prose',
+        { autoAlpha: 0, y: 8 },
+        { autoAlpha: 1, y: 0 },
+        '-=0.12'
+      );
+
+      // Steps: each row springs in with back.out
+      tl.fromTo(
+        '.algo-step-row',
+        { autoAlpha: 0, y: 12 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          stagger: 0.055,
+          ease: 'back.out(1.4)',
+          duration: 0.38,
+        },
+        '-=0.1'
+      );
+    },
+    {
+      scope: sidebarRef,
+      dependencies: [isOpen, algoInfo?.name],
+      revertOnUpdate: true,
+    }
+  );
+
   return (
     <aside
+      ref={sidebarRef}
       className="algo-sidebar"
       style={{ width: isOpen ? width : 0 }}
       aria-hidden={!isOpen}

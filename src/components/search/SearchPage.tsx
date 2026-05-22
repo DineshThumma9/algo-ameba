@@ -75,6 +75,19 @@ const SearchPage = () => {
   const { contextSafe } = useGSAP({ scope: barsContainerRef });
   const activeLineRef = useRef<SVGPathElement>(null);
 
+  // Subtle fade+lift when search algorithm switches
+  useGSAP(
+    () => {
+      if (!barsContainerRef.current) return;
+      gsap.fromTo(
+        barsContainerRef.current,
+        { autoAlpha: 0, y: 12 },
+        { autoAlpha: 1, y: 0, duration: 0.35, ease: 'power2.out' }
+      );
+    },
+    { dependencies: [mode], scope: barsContainerRef, revertOnUpdate: true }
+  );
+
   const getExistingBarElements = (ids: string[]) =>
     ids
       .map((id) => barRefs.current[id])

@@ -147,6 +147,19 @@ const SortPage = () => {
     setBars(randomBars);
   }, [bars.length]);
 
+  // Subtle fade+lift on the bars canvas when the algorithm switches
+  useGSAP(
+    () => {
+      if (!barsContainerRef.current) return;
+      gsap.fromTo(
+        barsContainerRef.current,
+        { autoAlpha: 0, y: 12 },
+        { autoAlpha: 1, y: 0, duration: 0.35, ease: 'power2.out' }
+      );
+    },
+    { dependencies: [mode], scope: barsContainerRef, revertOnUpdate: true }
+  );
+
   const clampSpeed = (v: number) => Math.min(3, Math.max(0.25, v));
 
   const validModes = new Set<SortAlgorithmKey>([

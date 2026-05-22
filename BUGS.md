@@ -27,11 +27,11 @@ Even in dark mode there are color mismatchs and doesnt always cohesive
 
 ## Missing Implementations
 
----Monotonic Queue,Circular Queue & Graph Algo's
+<!-- ---Monotonic Queue,Circular Queue & Graph Algo's -->
 
 <!-- No Feedback on Queue Full or Invalid Inputs need of Toasts or Alerts -->
 
-Regeneration on Clear Automatically
+<!-- Regeneration on Clear Automatically -->
 
 <!-- Need of parsing Csv values -->
 

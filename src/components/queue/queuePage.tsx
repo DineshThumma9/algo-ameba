@@ -13,6 +13,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup.ts';
 import { toast } from 'sonner';
 import AlgoBookShell from '@/components/AlgoBookShell';
+import { QUEUE_INFO } from '@/constants/algoInfo';
 import ColorLegend, { QUEUE_LEGEND } from '../ColorLegend';
 
 type QueueItem = { id: number; value: number };
@@ -372,7 +373,7 @@ const QueuePage = () => {
 
   return (
     <AlgoBookShell
-      algoInfo={null}
+      algoInfo={QUEUE_INFO}
       helper={{ text: phaseLabel, defaultVisible: false }}
     >
       <div className="min-h-screen bg-background flex flex-col font-audiowide">

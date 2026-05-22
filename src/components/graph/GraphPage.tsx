@@ -13,6 +13,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup';
 import { toast } from 'sonner';
 import AlgoBookShell from '@/components/AlgoBookShell';
+import { GRAPH_ALGO_INFO } from '@/constants/algoInfo';
 import ColorLegend, { TREE_GRAPH_LEGEND } from '../ColorLegend';
 import algorithms from './graphConfig';
 import {
@@ -496,7 +497,7 @@ const GraphPage = () => {
 
   return (
     <AlgoBookShell
-      algoInfo={null}
+      algoInfo={GRAPH_ALGO_INFO[algo] ?? null}
       helper={{
         text: phaseLabel || ' ',
         nextExploring,

@@ -3,7 +3,7 @@ import type { AlgoImplementations } from '../algoInfo';
 export const bfsImpl: AlgoImplementations = {
   python: `from collections import defaultdict, deque
 
-graph = defaultdict(list)
+        graph = defaultdict(list)
 
 def add_edge(u, v):
     graph[u].append(v)

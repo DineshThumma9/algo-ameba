@@ -17,11 +17,13 @@ import { pushToHeap, popFromHeap, buildTreeFromArray } from './heapAlgorithms';
 import { type HeapNode, type RenderNode, type RenderEdge } from './heapTypes';
 import AlgoBookShell from '@/components/AlgoBookShell';
 import ColorLegend, { HEAP_LEGEND } from '../ColorLegend';
+import { HEAP_ALGO_INFO } from '@/constants/algoInfo';
 
 const HeapPage = () => {
   const MAX_HEAP_SIZE = 15;
   const [algo, setAlgo] = useState('Min-Heap');
   const [inputValue, setInputValue] = useState('');
+  const [activeOp, setActiveOp] = useState<'push' | 'pop'>('push');
 
   const [heap, setHeap] = useState<number[]>([]);
 
@@ -271,6 +273,7 @@ const HeapPage = () => {
   };
 
   const onInsert = contextSafe((val: string) => {
+    setActiveOp('push');
     const values = val
       .split(',')
       .map((v) => Number(v.trim()))
@@ -346,6 +349,7 @@ const HeapPage = () => {
 
   const onDelete = contextSafe(() => {
     if (heap.length === 0) return;
+    setActiveOp('pop');
 
     const rootValue = heap[0];
     const lastIdx = heap.length - 1;
@@ -450,7 +454,7 @@ const HeapPage = () => {
 
   return (
     <AlgoBookShell
-      algoInfo={null}
+      algoInfo={HEAP_ALGO_INFO[activeOp] ?? null}
       helper={{ text: ' ', defaultVisible: false }}
     >
       <div className="min-h-screen flex flex-col bg-background font-audiowide">

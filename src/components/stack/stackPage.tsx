@@ -13,6 +13,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup.ts';
 import { toast } from 'sonner';
 import AlgoBookShell from '@/components/AlgoBookShell';
+import { STACK_INFO } from '@/constants/algoInfo';
 import ColorLegend, { STACK_LEGEND } from '../ColorLegend';
 
 type Status = 'popping' | 'pushing';
@@ -374,7 +375,7 @@ const StackPage = () => {
 
   return (
     <AlgoBookShell
-      algoInfo={null}
+      algoInfo={STACK_INFO}
       helper={{
         text: phaseLabel || 'Waiting for input...',
         defaultVisible: false,

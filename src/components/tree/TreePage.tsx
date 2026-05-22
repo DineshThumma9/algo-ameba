@@ -14,6 +14,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup';
 import { toast } from 'sonner';
 import AlgoBookShell from '@/components/AlgoBookShell';
+import { TREE_ALGO_INFO } from '@/constants/algoInfo';
 import ColorLegend, { TREE_GRAPH_LEGEND } from '../ColorLegend';
 
 interface TreeNode {
@@ -265,6 +266,25 @@ const TreePage = () => {
     { scope: containerRef, dependencies: [edges] }
   );
 
+  // Soft fade when traversal type switches
+  useGSAP(
+    () => {
+      if (!containerRef.current) return;
+      gsap.fromTo(
+        containerRef.current,
+        { autoAlpha: 0.4, scale: 0.985 },
+        {
+          autoAlpha: 1,
+          scale: 1,
+          duration: 0.4,
+          ease: 'power2.out',
+          transformOrigin: 'center center',
+        }
+      );
+    },
+    { scope: containerRef, dependencies: [traversal], revertOnUpdate: true }
+  );
+
   const MAX_TREE_SIZE = 40; // Increased max tree size for infinite canvas
 
   const onInsert = (val: string) => {
@@ -464,7 +484,7 @@ const TreePage = () => {
 
   return (
     <AlgoBookShell
-      algoInfo={null}
+      algoInfo={TREE_ALGO_INFO[traversal.toLowerCase()] ?? null}
       helper={{ text: ' ', defaultVisible: false }}
     >
       <div className="min-h-screen flex flex-col bg-background font-audiowide">
