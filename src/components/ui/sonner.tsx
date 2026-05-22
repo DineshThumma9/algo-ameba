@@ -39,7 +39,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           closeButton:
             "!bg-[var(--toast-bg)] !border-[var(--toast-border)] !text-[var(--toast-fg)]",
           actionButton:
-            "!bg-[var(--brand)] !text-black !font-semibold !text-xs",
+            "!bg-[var(--brand)] !text-[var(--brand-foreground)] !font-semibold !text-xs",
         },
       }}
       style={

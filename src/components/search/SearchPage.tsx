@@ -4,7 +4,8 @@ import gsap from '@/gsapSetup'; // centralized GSAP instance with plugins regist
 import { useGSAP } from '@gsap/react';
 import { toast } from 'sonner';
 import SharedLayout from '@/components/SharedLayout';
-import FloatingHelper from '@/components/FloatingHelper';
+import AlgoBookShell from '@/components/AlgoBookShell';
+import { SEARCH_ALGO_INFO } from '@/constants/algoInfo';
 import { ROUTES } from '@/constants/routes';
 import { useSearchVizulizer } from '@/hooks/useSearchVizulizer';
 import {
@@ -413,7 +414,10 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <AlgoBookShell
+      algoInfo={SEARCH_ALGO_INFO[mode] ?? null}
+      helper={{ text: phaseLabel }}
+    >
       <SharedLayout
         inputValue={inputValue}
         setInputValue={setInputValue}
@@ -480,8 +484,7 @@ const SearchPage = () => {
           </div>
         </div>
       </SharedLayout>
-      <FloatingHelper text={phaseLabel} />
-    </div>
+    </AlgoBookShell>
   );
 };
 

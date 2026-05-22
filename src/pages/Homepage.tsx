@@ -3,7 +3,7 @@ import { ModeToggle } from '@/components/mode-toggle.tsx';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../public/Ameba.png';
 import { ROUTES } from '@/constants/routes';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import * as d3 from 'd3';
 import gsap from '@/gsapSetup';
 import { useGSAP } from '@gsap/react';
@@ -27,6 +27,100 @@ const RightArrow = ({ className = 'w-5 h-5' }) => (
 
 const graphLetters = ['G', 'R', 'A', 'P', 'H'];
 
+type HierarchyPrefix = 'tree' | 'heap';
+
+type HomepageGraphNode = {
+  id: number;
+  label: string;
+  x: number;
+  y: number;
+};
+
+type HomepageGraphLink = { source: number; target: number };
+
+const GRAPH_HOVER_NODES = [0, 1, 2, 3, 4];
+
+const buildRandomHomepageGraph = (): {
+  nodes: HomepageGraphNode[];
+  links: HomepageGraphLink[];
+} => {
+  const simWidth = 1000;
+  const simHeight = 400;
+  const nodeRadius = 25;
+  const nodeCount = graphLetters.length;
+
+  const simNodes = Array.from({ length: nodeCount }, (_, i) => ({
+    id: i,
+    label: graphLetters[i],
+    x: Math.random() * (simWidth - nodeRadius * 2) + nodeRadius,
+    y: Math.random() * (simHeight - nodeRadius * 2) + nodeRadius,
+  }));
+
+  const simLinks: { source: number; target: number }[] = [];
+  for (let i = 0; i < nodeCount; i += 1) {
+    if (i < nodeCount - 1) {
+      simLinks.push({ source: i, target: i + 1 });
+    }
+    const randomTarget = Math.floor(Math.random() * nodeCount);
+    if (randomTarget !== i) {
+      simLinks.push({ source: i, target: randomTarget });
+    }
+  }
+
+  const simulation = d3
+    .forceSimulation(simNodes as d3.SimulationNodeDatum[])
+    .force(
+      'link',
+      d3
+        .forceLink(simLinks)
+        .id((d: d3.SimulationNodeDatum) => (d as { id: number }).id)
+        .distance(100)
+    )
+    .force('charge', d3.forceManyBody().strength(-150))
+    .force('center', d3.forceCenter(simWidth / 2, simHeight / 2))
+    .force('collision', d3.forceCollide().radius(nodeRadius + 10))
+    .force('bounds', () => {
+      simNodes.forEach((node) => {
+        const margin = nodeRadius;
+        if (node.x - margin < 0) node.x = margin;
+        if (node.x + margin > simWidth) node.x = simWidth - margin;
+        if (node.y - margin < 0) node.y = margin;
+        if (node.y + margin > simHeight) node.y = simHeight - margin;
+      });
+    });
+
+  simulation.stop();
+  for (let tick = 0; tick < 400; tick += 1) {
+    simulation.tick();
+  }
+
+  const linkId = (end: number | { id: number }) =>
+    typeof end === 'number' ? end : end.id;
+
+  return {
+    nodes: simNodes.map((node) => ({
+      id: node.id,
+      label: node.label,
+      x: node.x,
+      y: node.y,
+    })),
+    // forceLink mutates source/target into node objects — normalize back to ids
+    links: simLinks.map((link) => ({
+      source: linkId(link.source),
+      target: linkId(link.target),
+    })),
+  };
+};
+const TREE_HOVER_PATH = ['0', '0-0', '0-0-0'];
+const HEAP_HOVER_PATH = ['0', '0-0', '0-0-0'];
+
+const getHierarchyPathId = (node: d3.HierarchyNode<{ num: string | number }>): string => {
+  if (!node.parent) return '0';
+  const parentId = getHierarchyPathId(node.parent);
+  const index = node.parent.children?.indexOf(node) ?? 0;
+  return `${parentId}-${index}`;
+};
+
 const Homepage = () => {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,6 +137,12 @@ const Homepage = () => {
   const linkedListCardRef = useRef<HTMLDivElement>(null);
   const linkedListPointerRef = useRef<HTMLDivElement>(null);
   const linkedListHoverTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const treeCardRef = useRef<HTMLDivElement>(null);
+  const treeHoverTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const graphCardRef = useRef<HTMLDivElement>(null);
+  const graphHoverTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const heapCardRef = useRef<HTMLDivElement>(null);
+  const heapHoverTimelineRef = useRef<gsap.core.Timeline | null>(null);
 
   const treeData = {
     num: 'T',
@@ -85,7 +185,15 @@ const Homepage = () => {
     ],
   };
 
-  const safeLength = 15;
+  const [graphNodes, setGraphNodes] = useState<HomepageGraphNode[]>([]);
+  const [graphLinks, setGraphLinks] = useState<HomepageGraphLink[]>([]);
+
+  useEffect(() => {
+    const graph = buildRandomHomepageGraph();
+    setGraphNodes(graph.nodes);
+    setGraphLinks(graph.links);
+  }, []);
+
   const sortingBars = [
     { char: 'S', height: 75 },
     { char: 'O', height: 175 },
@@ -95,82 +203,16 @@ const Homepage = () => {
     { char: 'N', height: 99 },
     { char: 'G', height: 230 },
   ];
-  const [nodes, setNodes] = useState<
-    { id: number; label: string; x: number; y: number }[]
-  >([]);
-  const [links, setLinks] = useState<{ source: number; target: number }[]>([]);
-
-  // GRAPH SIMULATION EFFECT
-  useEffect(() => {
-    const safeLength = graphLetters.length;
-
-    // FIXED: Use a hardcoded viewBox coordinate system instead of window.innerWidth
-    const simWidth = 1000;
-    const simHeight = 400;
-    const nodeRadius = 25;
-
-    const initialNodes = Array.from({ length: safeLength }, (_, i) => ({
-      id: i,
-      label: graphLetters[i],
-      x: Math.random() * (simWidth - nodeRadius * 2) + nodeRadius,
-      y: Math.random() * (simHeight - nodeRadius * 2) + nodeRadius,
-      vx: 0,
-      vy: 0,
-    }));
-
-    const initialLinks: { source: number; target: number }[] = [];
-    for (let i = 0; i < safeLength; i++) {
-      if (i < safeLength - 1) {
-        initialLinks.push({ source: i, target: i + 1 });
-      }
-      const randomTarget = Math.floor(Math.random() * safeLength);
-      if (randomTarget !== i) {
-        initialLinks.push({ source: i, target: randomTarget });
-      }
-    }
-
-    const simulation = d3
-      .forceSimulation(initialNodes)
-      .force(
-        'link',
-        d3
-          .forceLink(initialLinks)
-          .id((d: any) => d.id)
-          .distance(100)
-      )
-      .force('charge', d3.forceManyBody().strength(-150))
-      // FIXED: Center exactly in the middle of our 1000x400 viewBox
-      .force('center', d3.forceCenter(simWidth / 2, simHeight / 2))
-      .force('collision', d3.forceCollide().radius(nodeRadius + 10))
-      .force('bounds', () => {
-        initialNodes.forEach((node: any) => {
-          const margin = nodeRadius;
-          if (node.x - margin < 0) node.x = margin;
-          if (node.x + margin > simWidth) node.x = simWidth - margin;
-          if (node.y - margin < 0) node.y = margin;
-          if (node.y + margin > simHeight) node.y = simHeight - margin;
-        });
-      })
-      .on('tick', () => {
-        setNodes([...initialNodes]);
-        setLinks([...initialLinks]);
-      });
-
-    return () => {
-      simulation.stop();
-    };
-  }, [safeLength]);
-
   // TREE EFFECT
   useEffect(() => {
     if (!svgRef.current) return;
-    drawHierarchy(svgRef.current, treeData);
+    drawHierarchy(svgRef.current, treeData, 'tree');
   }, [treeData]);
 
   // HEAP EFFECT
   useEffect(() => {
     if (!svgHeapRef.current) return;
-    drawHierarchy(svgHeapRef.current, heapData);
+    drawHierarchy(svgHeapRef.current, heapData, 'heap');
   }, [heapData]);
 
   const { contextSafe } = useGSAP({ scope: searchCardRef });
@@ -501,6 +543,316 @@ const Homepage = () => {
     scope: linkedListCardRef,
   });
 
+  const resetHierarchyHover = (
+    prefix: HierarchyPrefix,
+    timelineRef: MutableRefObject<gsap.core.Timeline | null>
+  ) => {
+    timelineRef.current?.kill();
+    timelineRef.current = null;
+
+    gsap.to(`.${prefix}-node-circle`, {
+      fill: 'var(--viz-item-bg)',
+      stroke: 'var(--viz-item-border)',
+      strokeWidth: 2,
+      duration: 0.2,
+      overwrite: 'auto',
+    });
+
+    gsap.to(`.${prefix}-link`, {
+      stroke: 'var(--edge)',
+      strokeWidth: 2,
+      duration: 0.2,
+      overwrite: 'auto',
+    });
+  };
+
+  const playHierarchyHover = (
+    prefix: HierarchyPrefix,
+    pathIds: string[],
+    timelineRef: MutableRefObject<gsap.core.Timeline | null>
+  ) => {
+    timelineRef.current?.kill();
+
+    gsap.set(`.${prefix}-node-circle`, {
+      fill: 'var(--viz-item-bg)',
+      stroke: 'var(--viz-item-border)',
+      strokeWidth: 2,
+      overwrite: 'auto',
+    });
+
+    gsap.set(`.${prefix}-link`, {
+      stroke: 'var(--edge)',
+      strokeWidth: 2,
+      overwrite: 'auto',
+    });
+
+    const tl = gsap.timeline();
+
+    pathIds.forEach((pathId, index) => {
+      const nodeSelector = `#${prefix}-node-${pathId}`;
+
+      tl.to(nodeSelector, {
+        fill: '#facc15',
+        stroke: '#eab308',
+        strokeWidth: 3,
+        duration: 0.22,
+        ease: 'power2.out',
+      });
+
+      if (index > 0) {
+        const prevId = pathIds[index - 1];
+        const edgeSelector = `#${prefix}-link-${prevId}-${pathId}`;
+
+        tl.to(
+          edgeSelector,
+          {
+            stroke: '#facc15',
+            strokeWidth: 3,
+            duration: 0.22,
+            ease: 'power2.out',
+          },
+          '<0.08'
+        );
+      }
+
+      if (index > 0) {
+        const prevId = pathIds[index - 1];
+        tl.to(
+          `#${prefix}-node-${prevId}`,
+          {
+            fill: 'var(--viz-item-bg)',
+            stroke: 'var(--viz-item-border)',
+            strokeWidth: 2,
+            duration: 0.14,
+            ease: 'power1.out',
+          },
+          '<0.12'
+        );
+
+        if (index > 1) {
+          const edgeBeforePrev = `#${prefix}-link-${pathIds[index - 2]}-${prevId}`;
+          tl.to(
+            edgeBeforePrev,
+            {
+              stroke: 'var(--edge)',
+              strokeWidth: 2,
+              duration: 0.14,
+              ease: 'power1.out',
+            },
+            '<'
+          );
+        }
+      }
+    });
+
+    const lastId = pathIds[pathIds.length - 1];
+    const prevLastId = pathIds[pathIds.length - 2];
+
+    tl.to(`#${prefix}-node-${lastId}`, {
+      fill: '#22c55e',
+      stroke: '#16a34a',
+      strokeWidth: 3,
+      duration: 0.28,
+      ease: 'power2.out',
+    });
+
+    if (prevLastId) {
+      tl.to(
+        `#${prefix}-link-${prevLastId}-${lastId}`,
+        {
+          stroke: '#22c55e',
+          strokeWidth: 3,
+          duration: 0.28,
+          ease: 'power2.out',
+        },
+        '<'
+      );
+    }
+
+    timelineRef.current = tl;
+  };
+
+  // TREE ANIMATIONS
+  const { contextSafe: treeContextSafe } = useGSAP({ scope: treeCardRef });
+
+  const resetTreeHover = treeContextSafe(() => {
+    resetHierarchyHover('tree', treeHoverTimelineRef);
+  });
+
+  const playTreeHover = treeContextSafe(() => {
+    playHierarchyHover('tree', TREE_HOVER_PATH, treeHoverTimelineRef);
+  });
+
+  // HEAP ANIMATIONS
+  const { contextSafe: heapContextSafe } = useGSAP({ scope: heapCardRef });
+
+  const resetHeapHover = heapContextSafe(() => {
+    resetHierarchyHover('heap', heapHoverTimelineRef);
+
+    gsap.to('.heap-letter', {
+      backgroundColor: 'var(--box-bg)',
+      scale: 1,
+      duration: 0.2,
+      overwrite: 'auto',
+    });
+  });
+
+  const playHeapHover = heapContextSafe(() => {
+    playHierarchyHover('heap', HEAP_HOVER_PATH, heapHoverTimelineRef);
+
+    const letters = gsap.utils.toArray<HTMLElement>('.heap-letter');
+    if (!letters.length || !heapHoverTimelineRef.current) return;
+
+    const tl = heapHoverTimelineRef.current;
+
+    tl.to(
+      letters,
+      {
+        backgroundColor: '#facc15',
+        scale: 1.05,
+        duration: 0.18,
+        stagger: 0.06,
+        ease: 'power2.out',
+      },
+      0
+    );
+
+    tl.to(
+      letters,
+      {
+        backgroundColor: '#22c55e',
+        duration: 0.2,
+        ease: 'power1.out',
+      },
+      '>-0.1'
+    );
+  });
+
+  // GRAPH ANIMATIONS
+  const { contextSafe: graphContextSafe } = useGSAP({ scope: graphCardRef });
+
+  const resetGraphHover = graphContextSafe(() => {
+    graphHoverTimelineRef.current?.kill();
+    graphHoverTimelineRef.current = null;
+
+    gsap.to('.graph-node', {
+      fill: 'var(--viz-item-bg)',
+      stroke: 'var(--viz-item-border)',
+      strokeWidth: 2,
+      duration: 0.2,
+      overwrite: 'auto',
+    });
+
+    gsap.to('.graph-edge', {
+      stroke: 'var(--edge)',
+      strokeWidth: 3,
+      duration: 0.2,
+      overwrite: 'auto',
+    });
+  });
+
+  const playGraphHover = graphContextSafe(() => {
+    graphHoverTimelineRef.current?.kill();
+
+    gsap.set('.graph-node', {
+      fill: 'var(--viz-item-bg)',
+      stroke: 'var(--viz-item-border)',
+      strokeWidth: 2,
+      overwrite: 'auto',
+    });
+
+    gsap.set('.graph-edge', {
+      stroke: 'var(--edge)',
+      strokeWidth: 3,
+      overwrite: 'auto',
+    });
+
+    const tl = gsap.timeline();
+    const pathNodes = GRAPH_HOVER_NODES;
+
+    tl.to(`#graph-node-${pathNodes[0]}`, {
+      fill: '#facc15',
+      stroke: '#eab308',
+      strokeWidth: 3,
+      duration: 0.22,
+      ease: 'power2.out',
+    });
+
+    for (let i = 0; i < pathNodes.length - 1; i += 1) {
+      const source = pathNodes[i];
+      const target = pathNodes[i + 1];
+
+      tl.to(`#graph-edge-${source}-${target}`, {
+        stroke: '#facc15',
+        strokeWidth: 4,
+        duration: 0.28,
+        ease: 'power2.out',
+      });
+
+      tl.to(
+        `#graph-node-${target}`,
+        {
+          fill: '#facc15',
+          stroke: '#eab308',
+          strokeWidth: 3,
+          duration: 0.22,
+          ease: 'power2.out',
+        },
+        '<0.08'
+      );
+
+      if (i > 0) {
+        const prev = pathNodes[i - 1];
+        tl.to(
+          `#graph-node-${prev}`,
+          {
+            fill: 'var(--viz-item-bg)',
+            stroke: 'var(--viz-item-border)',
+            strokeWidth: 2,
+            duration: 0.14,
+            ease: 'power1.out',
+          },
+          '<0.1'
+        );
+
+        tl.to(
+          `#graph-edge-${pathNodes[i - 1]}-${source}`,
+          {
+            stroke: 'var(--edge)',
+            strokeWidth: 3,
+            duration: 0.14,
+            ease: 'power1.out',
+          },
+          '<'
+        );
+      }
+    }
+
+    const lastNode = pathNodes[pathNodes.length - 1];
+    const prevNode = pathNodes[pathNodes.length - 2];
+
+    tl.to(`#graph-node-${lastNode}`, {
+      fill: '#22c55e',
+      stroke: '#16a34a',
+      strokeWidth: 3,
+      duration: 0.28,
+      ease: 'power2.out',
+    });
+
+    tl.to(
+      `#graph-edge-${prevNode}-${lastNode}`,
+      {
+        stroke: '#22c55e',
+        strokeWidth: 4,
+        duration: 0.28,
+        ease: 'power2.out',
+      },
+      '<'
+    );
+
+    graphHoverTimelineRef.current = tl;
+  });
+
   const getLinkedPointerPosition = (
     node: HTMLElement,
     container: HTMLElement
@@ -648,11 +1000,21 @@ const Homepage = () => {
       queueHoverTimelineRef.current = null;
       linkedListHoverTimelineRef.current?.kill();
       linkedListHoverTimelineRef.current = null;
+      treeHoverTimelineRef.current?.kill();
+      treeHoverTimelineRef.current = null;
+      graphHoverTimelineRef.current?.kill();
+      graphHoverTimelineRef.current = null;
+      heapHoverTimelineRef.current?.kill();
+      heapHoverTimelineRef.current = null;
     };
   }, []);
 
   // Reusable function to draw both Tree and Heap cohesively
-  const drawHierarchy = (svgElement: SVGSVGElement, data: any) => {
+  const drawHierarchy = (
+    svgElement: SVGSVGElement,
+    data: { num: string | number; children?: unknown[] },
+    prefix: HierarchyPrefix
+  ) => {
     const w = 600;
     const height = 300;
     const margins = { top: 40, right: 20, bottom: 40, left: 20 };
@@ -679,7 +1041,12 @@ const Homepage = () => {
       .data(root.links())
       .enter()
       .append('path')
-      .attr('class', 'link')
+      .attr('class', `link ${prefix}-link`)
+      .attr('id', (d) => {
+        const sourceId = getHierarchyPathId(d.source);
+        const targetId = getHierarchyPathId(d.target);
+        return `${prefix}-link-${sourceId}-${targetId}`;
+      })
       .attr(
         'd',
         d3
@@ -688,7 +1055,7 @@ const Homepage = () => {
           .y((d: any) => d.y)
       )
       .attr('fill', 'none')
-      .attr('stroke', 'var(--edge)') // Use variable for edge line
+      .attr('stroke', 'var(--edge)')
       .attr('stroke-width', 2);
 
     const nodes = svg
@@ -701,14 +1068,16 @@ const Homepage = () => {
 
     nodes
       .append('circle')
-      .attr('r', 25) // Cohesive larger sizing
+      .attr('class', `${prefix}-node-circle`)
+      .attr('id', (d) => `${prefix}-node-${getHierarchyPathId(d)}`)
+      .attr('r', 25)
       .attr('fill', 'var(--viz-item-bg)')
       .attr('stroke', 'var(--viz-item-border)')
       .attr('stroke-width', 2);
 
     nodes
       .append('text')
-      .attr('dy', '5px') // Vertically centers text inside the circle
+      .attr('dy', '5px')
       .attr('text-anchor', 'middle')
       .text((d: any) => d.data.num)
       .attr('font-size', '18px')
@@ -875,7 +1244,12 @@ const Homepage = () => {
 
         {/* Tree & Heap Container */}
         <div className="flex flex-col md:flex-row w-full gap-3 md:gap-6 items-stretch">
-          <div className="flex-1 flex flex-col w-full justify-between items-center p-3 md:p-5 card rounded-lg min-h-[300px] md:min-h-[400px]">
+          <div
+            ref={treeCardRef}
+            onMouseEnter={playTreeHover}
+            onMouseLeave={resetTreeHover}
+            className="flex-1 flex flex-col w-full justify-between items-center p-3 md:p-5 card rounded-lg min-h-[300px] md:min-h-[400px]"
+          >
             <div
               ref={containerRef}
               className="h-full w-full flex justify-center items-center overflow-hidden"
@@ -894,7 +1268,12 @@ const Homepage = () => {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col w-full justify-between items-center p-3 md:p-5 card rounded-lg min-h-[300px] md:min-h-[400px]">
+          <div
+            ref={heapCardRef}
+            onMouseEnter={playHeapHover}
+            onMouseLeave={resetHeapHover}
+            className="flex-1 flex flex-col w-full justify-between items-center p-3 md:p-5 card rounded-lg min-h-[300px] md:min-h-[400px]"
+          >
             <div className="h-full w-full flex flex-col justify-center items-center overflow-hidden">
               <svg
                 ref={svgHeapRef}
@@ -904,7 +1283,7 @@ const Homepage = () => {
               ></svg>
               <div className="flex p-1 m-2 flex-row align-center content-center justify-center gap-2 items-center  w-fit h-[60px] rounded-sm">
                 {'HEAP'.split('').map((ch) => (
-                  <div data-char={ch} className="heap-node">
+                  <div key={ch} data-char={ch} className="heap-letter heap-node">
                     {ch}
                   </div>
                 ))}
@@ -919,37 +1298,46 @@ const Homepage = () => {
         </div>
 
         {/* Graph Container */}
-        <div className="flex flex-col justify-center items-center w-full min-h-[350px] md:h-[500px] rounded-sm ddrag-container card relative overflow-hidden">
-          {/* FIXED: using viewBox to lock coordinates so the center is perfectly framed */}
+        <div
+          ref={graphCardRef}
+          onMouseEnter={playGraphHover}
+          onMouseLeave={resetGraphHover}
+          className="flex flex-col justify-center items-center w-full min-h-[350px] md:h-[500px] rounded-sm card relative overflow-hidden"
+        >
           <svg
             viewBox="0 0 1000 400"
             preserveAspectRatio="xMidYMid meet"
             style={{ display: 'block', width: '100%', height: '100%' }}
           >
-            {links.map((link: any, index: number) => {
-              const sourceNode = link.source;
-              const targetNode = link.target;
+            {graphLinks.map((link) => {
+              const sourceNode = graphNodes[link.source];
+              const targetNode = graphNodes[link.target];
               if (!sourceNode || !targetNode) return null;
 
               return (
-                <path
-                  key={`link-${index}`}
-                  id={`path-${sourceNode.id}-${targetNode.id}`}
-                  className="d3-link"
-                  d={`M ${sourceNode.x} ${sourceNode.y} L ${targetNode.x} ${targetNode.y}`}
-                  fill="none"
+                <line
+                  key={`link-${link.source}-${link.target}`}
+                  id={`graph-edge-${link.source}-${link.target}`}
+                  className="graph-edge"
+                  x1={sourceNode.x}
+                  y1={sourceNode.y}
+                  x2={targetNode.x}
+                  y2={targetNode.y}
                   stroke="var(--edge)"
                   strokeWidth="3"
+                  strokeLinecap="round"
                 />
               );
             })}
 
-            {nodes.map((node) => (
-              <g key={node.id} className="ddrag">
+            {graphNodes.map((node) => (
+              <g key={node.id}>
                 <circle
+                  id={`graph-node-${node.id}`}
                   cx={node.x}
                   cy={node.y}
                   r="25"
+                  className="graph-node"
                   fill="var(--viz-item-bg)"
                   stroke="var(--viz-item-border)"
                   strokeWidth="2"

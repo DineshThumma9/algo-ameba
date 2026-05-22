@@ -80,8 +80,8 @@ const SharedLayout = ({
 }: SharedLayoutProps) => {
   const navigate = useNavigate();
   return (
-    <div className="flex flex-col h-full w-full">
-      <div className="nav flex flex-wrap justify-between items-center gap-2 px-3 py-2 sm:gap-4 sm:px-6 sm:py-3">
+    <div className="shell flex flex-col h-full w-full min-h-0 bg-background">
+      <div className="algo-toolbar">
         {/* Input Insert */}
         <div className={'flex flex-wrap items-center gap-2 min-w-0'}>
           <div className="flex items-center gap-2 min-w-0">
@@ -159,21 +159,19 @@ const SharedLayout = ({
         </Select>
       </div>
 
-      {/* Visualization Area */}
-      <div className="flex-1 flex justify-center items-center">{children}</div>
+      {/* Visualization Area — bottom padding clears fixed legend/controller dock */}
+      <div className="flex-1 flex justify-center items-center min-h-0 pb-28 sm:pb-32">
+        {children}
+      </div>
 
-      {/* Legend + Controls in the same footer band */}
-      <footer
-        className="footer flex flex-col gap-0 w-full"
-        style={{ borderTop: 'none' }}
-      >
-        {/* Color legend strip — only rendered when entries are provided */}
+      {/* Legend + playback — full-width fixed dock */}
+      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
         {legend && legend.length > 0 && (
-          <div className="w-full flex justify-center">
-            <ColorLegend entries={legend} />
-          </div>
+          <ColorLegend
+            entries={legend}
+            className="px-4 py-1.5"
+          />
         )}
-
         <ControllerFooter
           isPlaying={isPlaying}
           onPlay={onPlay}
@@ -185,7 +183,7 @@ const SharedLayout = ({
           onSpeedIncrease={onSpeedIncrease}
           onSpeedDecrease={onSpeedDecrease}
         />
-      </footer>
+      </div>
     </div>
   );
 };

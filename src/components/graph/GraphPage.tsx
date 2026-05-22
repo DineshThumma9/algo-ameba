@@ -496,7 +496,7 @@ const GraphPage = () => {
 
   return (
     <div className="flex flex-col h-screen w-full shell">
-      <div className="nav w-full flex flex-wrap justify-between items-center gap-3 py-3 px-4 sm:px-8 mt-2">
+      <div className="algo-toolbar w-full mt-0 sm:px-8">
         {/* Dynamic Inputs */}
         <div className="left-section flex flex-wrap justify-start items-center gap-2">
           {currentConfig.startNode && (
@@ -603,10 +603,10 @@ const GraphPage = () => {
         algo={algo}
       />
       {/* Color legend */}
-      <div className="color-legend-fixed fixed bottom-0 left-1/2 -translate-x-1/2 z-40 rounded-t-lg">
+      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
         <ColorLegend
           entries={TREE_GRAPH_LEGEND}
-          className="px-4 py-1.5 rounded-t-lg"
+          className="px-4 py-1.5"
         />
       </div>
     </div>

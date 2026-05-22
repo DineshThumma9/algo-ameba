@@ -1,21 +1,23 @@
-import { useState, useEffect, useRef } from 'react';
-import { EyeIcon, XIcon } from 'lucide-react';
+import { useState, useEffect, useRef, type RefObject } from 'react';
+import { EyeIcon, XIcon, BookOpenIcon } from 'lucide-react';
 import gsap from '../gsapSetup';
 import { Draggable } from 'gsap/Draggable';
 
 gsap.registerPlugin(Draggable);
 
-interface FloatingHelperProps {
-  /** The text content to display. Defaults to "Waiting for input..." */
+export interface FloatingHelperProps {
   text?: string;
-  /** DOM id for the helper text element so pages can update it directly */
   textId?: string;
-  /** Whether the helper is initially visible */
   defaultVisible?: boolean;
   nextExploring?: number[];
   pathFollowed?: number[];
   algo?: string;
+  onToggleSidebar?: () => void;
+  sidebarOpen?: boolean;
+  /** When set, helper is positioned inside this container (avoids sidebar overlap). */
+  boundsRef?: RefObject<HTMLElement | null>;
 }
+
 const FloatingHelper = ({
   text = ' ',
   textId = 'helper-text',
@@ -23,108 +25,127 @@ const FloatingHelper = ({
   nextExploring,
   pathFollowed,
   algo,
+  onToggleSidebar,
+  sidebarOpen = false,
+  boundsRef,
 }: FloatingHelperProps) => {
   const [visible, setVisible] = useState(defaultVisible);
   const helperRef = useRef<HTMLDivElement>(null);
   const draggableRef = useRef<Draggable[] | undefined>(undefined);
 
+  const anchored = Boolean(boundsRef);
+  const positionClass = anchored
+    ? 'absolute top-3 left-3 z-30'
+    : 'fixed top-[68px] right-3 z-50';
+
   useEffect(() => {
-    if (visible && helperRef.current) {
-      draggableRef.current = Draggable.create(helperRef.current, {
-        type: 'x,y',
-        bounds: 'body',
-        zIndexBoost: true,
-      });
-    }
+    if (!visible || !helperRef.current) return;
+
+    const bounds = boundsRef?.current ?? document.body;
+
+    draggableRef.current = Draggable.create(helperRef.current, {
+      type: 'x,y',
+      bounds,
+      zIndexBoost: false,
+    });
+
     return () => {
       draggableRef.current?.forEach((d) => d.kill());
+      draggableRef.current = undefined;
     };
-  }, [visible]);
+  }, [visible, boundsRef]);
+
+  const bookButton = onToggleSidebar && !sidebarOpen && (
+    <button
+      type="button"
+      className="floating-helper-icon-btn"
+      onClick={onToggleSidebar}
+      title="Algorithm reference"
+      aria-label="Open algorithm reference"
+    >
+      <BookOpenIcon className="h-4 w-4" />
+    </button>
+  );
 
   if (!visible) {
     return (
-      <button
-        className="fixed top-[68px] right-3 z-50 flex items-center justify-center
-          p-3 rounded-full
-          bg-background/90 text-foreground backdrop-blur-md
-          border-2 border-border/80 shadow-[0_0_15px_rgba(0,255,17,0.15)]
-          hover:bg-muted hover:scale-105 hover:shadow-[0_0_20px_rgba(0,255,17,0.25)] transition-all duration-200"
-        onClick={() => setVisible(true)}
-        title="Show Helper"
-      >
-        <EyeIcon className="w-5 h-5 text-brand" />
-      </button>
+      <div className={`${positionClass} flex flex-col gap-2`}>
+        <button
+          type="button"
+          className="floating-helper-icon-btn"
+          onClick={() => setVisible(true)}
+          title="Show helper"
+          aria-label="Show helper"
+        >
+          <EyeIcon className="h-5 w-5 text-brand" />
+        </button>
+        {bookButton}
+      </div>
     );
   }
 
   return (
-    <div
-      ref={helperRef}
-      className="fixed top-[68px] right-3 z-50 min-w-[320px] max-w-[360px] cursor-move"
-      style={{ touchAction: 'none', opacity: text == ' ' ? 0 : 1 }}
-    >
+    <div className={`${positionClass} flex flex-col items-start gap-2`}>
+      {bookButton}
       <div
-        className="flex flex-col items-start gap-4 px-6 py-5
-        bg-background/95 backdrop-blur-xl rounded-3xl
-        border-2 border-brand/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] shadow-brand/20"
+        ref={helperRef}
+        className="floating-helper-card w-[min(100%,320px)] cursor-move sm:max-w-[340px]"
+        style={{ touchAction: 'none', opacity: text === ' ' ? 0 : 1 }}
       >
-        <div className="flex items-start justify-between w-full gap-4">
-          {/* Step text */}
-          <p
-            className="text-base leading-relaxed font-medium text-foreground"
-            id={textId}
-          >
-            {text}
-          </p>
-
-          {/* Close */}
-          <button
-            onClick={() => setVisible(false)}
-            className="shrink-0 p-1.5 -mr-2 -mt-1 rounded-full
-              text-muted-foreground/60 hover:text-foreground
-              hover:bg-red-500/10 hover:text-red-500 transition-all duration-200"
-          >
-            <XIcon className="w-5 h-5" />
-          </button>
-        </div>
-
-        {nextExploring && nextExploring.length > 0 && (
-          <div className="w-full mt-2 border-t-2 border-border/60 pt-4">
-            <h1 className="text-xs font-bold mb-3 text-muted-foreground uppercase tracking-widest">
-              Next Exploring {algo === 'DFS' ? '(Stack)' : '(Queue)'}
-            </h1>
-            <div
-              className={`flex ${algo === 'DFS' ? 'flex-col-reverse' : 'flex-row'} gap-2 max-h-[160px] overflow-auto flex-wrap pr-1`}
+        <div className="floating-helper-panel">
+          <div className="flex w-full items-start justify-between gap-3">
+            <p
+              id={textId}
+              className="font-plex text-sm font-medium leading-relaxed text-foreground"
             >
-              {nextExploring.map((node, idx) => (
-                <div
-                  key={`exploring-${node}-${idx}`}
-                  className="flex justify-center items-center px-3 py-1.5 bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-sm rounded-full border border-red-500/30 shadow-sm"
-                >
-                  {node}
-                </div>
-              ))}
-            </div>
+              {text}
+            </p>
+            <button
+              type="button"
+              onClick={() => setVisible(false)}
+              className="floating-helper-close"
+              aria-label="Hide helper"
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
           </div>
-        )}
 
-        {pathFollowed && pathFollowed.length > 0 && (
-          <div className="w-full mt-2 border-t-2 border-border/60 pt-4">
-            <h1 className="text-xs font-bold mb-3 text-muted-foreground uppercase tracking-widest">
-              Path Followed
-            </h1>
-            <div className="flex flex-row gap-2 max-h-[160px] overflow-auto flex-wrap pr-1">
-              {pathFollowed.map((node, idx) => (
-                <div
-                  key={`path-${node}-${idx}`}
-                  className="flex justify-center items-center px-3 py-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-sm rounded-full border border-blue-500/30 shadow-sm"
-                >
-                  {node}
-                </div>
-              ))}
+          {nextExploring && nextExploring.length > 0 && (
+            <div className="floating-helper-section">
+              <p className="floating-helper-section-title">
+                Next exploring {algo === 'DFS' ? '(stack)' : '(queue)'}
+              </p>
+              <div
+                className={`flex max-h-36 flex-wrap gap-2 overflow-auto pr-1 ${algo === 'DFS' ? 'flex-col-reverse' : 'flex-row'}`}
+              >
+                {nextExploring.map((node, idx) => (
+                  <span
+                    key={`exploring-${node}-${idx}`}
+                    className="floating-helper-chip floating-helper-chip--warn"
+                  >
+                    {node}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {pathFollowed && pathFollowed.length > 0 && (
+            <div className="floating-helper-section">
+              <p className="floating-helper-section-title">Path followed</p>
+              <div className="flex max-h-36 flex-row flex-wrap gap-2 overflow-auto pr-1">
+                {pathFollowed.map((node, idx) => (
+                  <span
+                    key={`path-${node}-${idx}`}
+                    className="floating-helper-chip floating-helper-chip--info"
+                  >
+                    {node}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

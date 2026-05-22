@@ -464,8 +464,8 @@ const TreePage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background font-audiowide">
-      <div className="sticky top-0 z-30  border-0 bg-background backdrop-blur">
-        <div className="flex flex-wrap justify-between items-center gap-2 py-2">
+      <div className="algo-toolbar">
+        <div className="flex flex-wrap justify-between items-center gap-2 w-full">
           <div className="flex flex-wrap justify-start items-center gap-2 px-3 py-1 mx-2">
             <Input
               className="input w-fit  px-2 max-w-[140px] py-1 "
@@ -602,10 +602,10 @@ const TreePage = () => {
       </div>
       <FloatingHelper />
       {/* Color legend */}
-      <div className="color-legend-fixed fixed bottom-0 left-1/2 -translate-x-1/2 z-40 rounded-t-lg">
+      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
         <ColorLegend
           entries={TREE_GRAPH_LEGEND}
-          className="px-4 py-1.5 rounded-t-lg"
+          className="px-4 py-1.5"
         />
       </div>
     </div>

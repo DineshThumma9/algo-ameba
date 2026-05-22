@@ -323,7 +323,7 @@ const LinkedListPage = () => {
           prevEl ?? {},
           prevEl
             ? {
-                borderColor: '#00ff11',
+                borderColor: 'var(--brand)',
                 boxShadow: '0 0 12px rgba(0,255,17,0.2)',
                 duration: 0.4,
               }
@@ -390,7 +390,7 @@ const LinkedListPage = () => {
           prevEl ?? {},
           prevEl
             ? {
-                borderColor: '#00ff11',
+                borderColor: 'var(--brand)',
                 boxShadow: '0 0 12px rgba(0,255,17,0.2)',
                 duration: 0.38,
               }
@@ -651,7 +651,7 @@ const LinkedListPage = () => {
       {/* ── Navbar ───────────────────────────────────────────────── */}
       <div
         ref={navRef}
-        className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3 bg-background border-0"
+        className="algo-toolbar w-full"
       >
         <div className="flex flex-wrap items-center gap-2">
           {/* Inputs */}
@@ -792,7 +792,7 @@ const LinkedListPage = () => {
         >
           {config.isDoubly ? (
             <div
-              className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-[#00ff11] text-black font-bold
+              className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-brand text-[var(--brand-foreground)] font-bold
               items-center justify-around"
               style={{
                 width: 'clamp(120px, 22vw, 192px)',
@@ -817,7 +817,7 @@ const LinkedListPage = () => {
             </div>
           ) : (
             <div
-              className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-[#00ff11] text-black font-bold
+              className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-brand text-[var(--brand-foreground)] font-bold
               items-center justify-around"
               style={{
                 width: 'clamp(100px, 18vw, 144px)',
@@ -834,7 +834,7 @@ const LinkedListPage = () => {
               </span>
             </div>
           )}
-          <span className="text-[10px] font-mono text-[#00ff11] mt-1">new</span>
+          <span className="text-[10px] font-mono text-brand mt-1">new</span>
         </div>
 
         {/* The list */}
@@ -1039,7 +1039,7 @@ const LinkedListPage = () => {
             <span className="text-cyan-400">■</span> pointer update
           </span>
           <span>
-            <span style={{ color: '#00ff11' }}>■</span> inserting
+            <span style={{ color: 'var(--brand)' }}>■</span> inserting
           </span>
           {config.isDoubly && (
             <span>
@@ -1066,10 +1066,10 @@ const LinkedListPage = () => {
       </div>
       <FloatingHelper />
       {/* Color legend */}
-      <div className="color-legend-fixed fixed bottom-0 left-1/2 -translate-x-1/2 z-40 rounded-t-lg">
+      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
         <ColorLegend
           entries={LINKED_LIST_LEGEND}
-          className="px-4 py-1.5 rounded-t-lg"
+          className="px-4 py-1.5"
         />
       </div>
     </div>

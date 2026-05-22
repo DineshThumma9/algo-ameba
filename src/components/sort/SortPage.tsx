@@ -5,7 +5,8 @@ import Flip from 'gsap/Flip';
 import { useGSAP } from '@gsap/react';
 import SharedLayout from '@/components/SharedLayout';
 import { toast } from 'sonner';
-import FloatingHelper from '@/components/FloatingHelper';
+import AlgoBookShell from '@/components/AlgoBookShell';
+import { SORT_ALGO_INFO } from '@/constants/algoInfo';
 import {
   SORT_BASIC_LEGEND,
   SORT_MERGE_LEGEND,
@@ -327,7 +328,10 @@ const SortPage = () => {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen flex flex-col">
+    <AlgoBookShell
+      algoInfo={SORT_ALGO_INFO[mode] ?? null}
+      helper={{ text: phaseLabel }}
+    >
       <SharedLayout
         inputValue={inputValue}
         setInputValue={setInputValue}
@@ -400,8 +404,7 @@ const SortPage = () => {
           </div>
         </div>
       </SharedLayout>
-      <FloatingHelper text={phaseLabel} />
-    </div>
+    </AlgoBookShell>
   );
 };
 

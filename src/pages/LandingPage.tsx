@@ -313,7 +313,7 @@ const LandingPage = () => {
 
       // Continuous pulse on CTA
       gsap.to(btn, {
-        boxShadow: '0 0 30px rgba(0, 255, 17, 0.4)',
+        boxShadow: '0 0 30px var(--brand-glow)',
         duration: 1.2,
         ease: 'sine.inOut',
         yoyo: true,

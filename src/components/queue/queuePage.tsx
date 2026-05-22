@@ -519,10 +519,10 @@ const QueuePage = () => {
       </footer>
       <FloatingHelper text={phaseLabel} />
       {/* Color legend */}
-      <div className="color-legend-fixed fixed bottom-0 left-1/2 -translate-x-1/2 z-40 rounded-t-lg">
+      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
         <ColorLegend
           entries={QUEUE_LEGEND}
-          className="px-4 py-1.5 rounded-t-lg"
+          className="px-4 py-1.5"
         />
       </div>
     </div>
