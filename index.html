@@ -43,6 +43,31 @@
       property="twitter:description"
       content="Interactive algorithm visualizer for data structures and pathfinding."
     />
+    <style>
+      /* Prevent FOUC (Flash of white) before React mounts */
+      html,
+      body {
+        background-color: #010513;
+      } /* dark mode bg */
+      html.light,
+      html.light body {
+        background-color: #e9edf3;
+      } /* light mode bg */
+    </style>
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem('vite-ui-theme') || 'dark';
+          if (theme === 'system') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+          }
+          if (theme === 'dark') document.documentElement.classList.add('dark');
+          else document.documentElement.classList.add('light');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

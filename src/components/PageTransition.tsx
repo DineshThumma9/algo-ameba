@@ -19,10 +19,12 @@ export function PageTransition({ children }: PageTransitionProps) {
   useGSAP(
     () => {
       if (!ref.current) return;
+      // useGSAP uses useLayoutEffect internally, so this fromTo executes synchronously
+      // before the browser paints the new route, preventing any flash.
       gsap.fromTo(
         ref.current,
-        { autoAlpha: 0, filter: 'blur(8px)' },
-        { autoAlpha: 1, filter: 'blur(0px)', duration: 0.4, ease: 'power2.out' }
+        { autoAlpha: 0 },
+        { autoAlpha: 1, duration: 0.35, ease: 'power2.out' }
       );
     },
     { dependencies: [location.pathname], scope: ref }

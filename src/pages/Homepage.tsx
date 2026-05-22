@@ -1169,9 +1169,7 @@ const Homepage = () => {
             ))}
           </div>
           <div className="card-name">
-            <h1 className="card-text">
-              Search
-            </h1>
+            <h1 className="card-text">Search</h1>
           </div>
         </div>
 
@@ -1193,9 +1191,7 @@ const Homepage = () => {
               ))}
             </div>
             <div className="self-start w-full p-2">
-              <h1 className="card-text">
-                Stack
-              </h1>
+              <h1 className="card-text">Stack</h1>
             </div>
           </div>
 
@@ -1219,9 +1215,7 @@ const Homepage = () => {
               ))}
             </div>
             <div className="self-start w-full p-2">
-              <h1 className="card-text">
-                Sorting
-              </h1>
+              <h1 className="card-text">Sorting</h1>
             </div>
           </div>
         </div>
@@ -1242,9 +1236,7 @@ const Homepage = () => {
             ))}
           </div>
           <div className="card-name">
-            <h1 className="card-text">
-              Queue
-            </h1>
+            <h1 className="card-text">Queue</h1>
           </div>
         </div>
 
@@ -1269,9 +1261,7 @@ const Homepage = () => {
               ></svg>
             </div>
             <div className="card-name">
-              <h1 className="card-text">
-                Tree
-              </h1>
+              <h1 className="card-text">Tree</h1>
             </div>
           </div>
 
@@ -1302,9 +1292,7 @@ const Homepage = () => {
               </div>
             </div>
             <div className="card-name">
-              <h1 className="card-text">
-                Heap
-              </h1>
+              <h1 className="card-text">Heap</h1>
             </div>
           </div>
         </div>
@@ -1371,9 +1359,7 @@ const Homepage = () => {
           </svg>
 
           <div className="card-name absolute bottom-2 left-2">
-            <h1 className="card-text w-fit">
-              Graph
-            </h1>
+            <h1 className="card-text w-fit">Graph</h1>
           </div>
         </div>
 
@@ -1404,9 +1390,7 @@ const Homepage = () => {
           </div>
 
           <div className="card-name">
-            <h1 className="card-text">
-              Linked List
-            </h1>
+            <h1 className="card-text">Linked List</h1>
           </div>
         </div>
       </section>
