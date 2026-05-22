@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/components/ui/theme-provider';
+import gsap from '@/gsapSetup';
 
 export function ModeToggle() {
   const { theme, setTheme } = useTheme();
@@ -20,7 +21,44 @@ export function ModeToggle() {
     return () => mq.removeEventListener('change', resolve);
   }, [theme]);
 
-  const toggle = () => setTheme(isDark ? 'light' : 'dark');
+  const toggle = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const isAppearanceTransition =
+      'startViewTransition' in document &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!isAppearanceTransition) {
+      setTheme(isDark ? 'light' : 'dark');
+      return;
+    }
+
+    const x = e.clientX;
+    const y = e.clientY;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    document.documentElement.style.setProperty('--theme-x', `${x}px`);
+    document.documentElement.style.setProperty('--theme-y', `${y}px`);
+    document.documentElement.style.setProperty('--theme-radius', '0px');
+
+    const transition = (document as any).startViewTransition(() => {
+      setTheme(isDark ? 'light' : 'dark');
+    });
+
+    transition.ready.then(() => {
+      gsap.to(document.documentElement, {
+        '--theme-radius': `${endRadius}px`,
+        duration: 0.5,
+        ease: 'power2.inOut',
+        onComplete: () => {
+          document.documentElement.style.removeProperty('--theme-radius');
+          document.documentElement.style.removeProperty('--theme-x');
+          document.documentElement.style.removeProperty('--theme-y');
+        },
+      });
+    });
+  };
 
   return (
     <button
