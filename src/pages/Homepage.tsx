@@ -114,7 +114,9 @@ const buildRandomHomepageGraph = (): {
 const TREE_HOVER_PATH = ['0', '0-0', '0-0-0'];
 const HEAP_HOVER_PATH = ['0', '0-0', '0-0-0'];
 
-const getHierarchyPathId = (node: d3.HierarchyNode<{ num: string | number }>): string => {
+const getHierarchyPathId = (
+  node: d3.HierarchyNode<{ num: string | number }>
+): string => {
   if (!node.parent) return '0';
   const parentId = getHierarchyPathId(node.parent);
   const index = node.parent.children?.indexOf(node) ?? 0;
@@ -1283,7 +1285,11 @@ const Homepage = () => {
               ></svg>
               <div className="flex p-1 m-2 flex-row align-center content-center justify-center gap-2 items-center  w-fit h-[60px] rounded-sm">
                 {'HEAP'.split('').map((ch) => (
-                  <div key={ch} data-char={ch} className="heap-letter heap-node">
+                  <div
+                    key={ch}
+                    data-char={ch}
+                    className="heap-letter heap-node"
+                  >
                     {ch}
                   </div>
                 ))}

@@ -1,37 +1,50 @@
+import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useTheme } from '@/components/ui/theme-provider';
 
 export function ModeToggle() {
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+
+  // Resolve the real active mode (handles 'system')
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const resolve = () => {
+      if (theme === 'dark') setIsDark(true);
+      else if (theme === 'light') setIsDark(false);
+      else setIsDark(mq.matches);
+    };
+    resolve();
+    mq.addEventListener('change', resolve);
+    return () => mq.removeEventListener('change', resolve);
+  }, [theme]);
+
+  const toggle = () => setTheme(isDark ? 'light' : 'dark');
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon">
-          <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-          <span className="sr-only">Toggle theme</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme('light')}>
-          Light
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('dark')}>
-          Dark
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('system')}>
-          System
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label="Toggle theme"
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="theme-toggle"
+      data-dark={isDark ? 'true' : 'false'}
+    >
+      {/* Track */}
+      <span className="theme-toggle__track" aria-hidden="true" />
+
+      {/* Sliding thumb */}
+      <span className="theme-toggle__thumb">
+        <Sun
+          className="theme-toggle__icon theme-toggle__icon--sun"
+          aria-hidden="true"
+        />
+        <Moon
+          className="theme-toggle__icon theme-toggle__icon--moon"
+          aria-hidden="true"
+        />
+      </span>
+    </button>
   );
 }

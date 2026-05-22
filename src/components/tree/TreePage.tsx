@@ -13,7 +13,7 @@ import * as d3 from 'd3';
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup';
 import { toast } from 'sonner';
-import FloatingHelper from '../FloatingHelper';
+import AlgoBookShell from '@/components/AlgoBookShell';
 import ColorLegend, { TREE_GRAPH_LEGEND } from '../ColorLegend';
 
 interface TreeNode {
@@ -463,77 +463,55 @@ const TreePage = () => {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-background font-audiowide">
-      <div className="algo-toolbar">
-        <div className="flex flex-wrap justify-between items-center gap-2 w-full">
-          <div className="flex flex-wrap justify-start items-center gap-2 px-3 py-1 mx-2">
-            <Input
-              className="input w-fit  px-2 max-w-[140px] py-1 "
-              placeholder="Enter Number"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && onInsert(inputValue)}
-            />
-            <div className="flex flex-wrap justify-center items-center gap-2 text-white">
-              <button
-                className="btn-primary"
-                onClick={() => onInsert(inputValue)}
-              >
-                Enter
-              </button>
-              <button
-                className="btn-danger"
-                onClick={() => onDelete(inputValue)}
-              >
-                Delete
-              </button>
-              <button
-                className="btn-neutral"
-                onClick={() => onSearch(inputValue)}
-              >
-                Search
-              </button>
-              <button className="btn-neutral bg-purple" onClick={onRandom}>
-                Generate Random
-              </button>
+    <AlgoBookShell
+      algoInfo={null}
+      helper={{ text: ' ', defaultVisible: false }}
+    >
+      <div className="min-h-screen flex flex-col bg-background font-audiowide">
+        <div className="algo-toolbar">
+          <div className="flex flex-wrap justify-between items-center gap-2 w-full">
+            <div className="flex flex-wrap justify-start items-center gap-2 px-3 py-1 mx-2">
+              <Input
+                className="input w-fit  px-2 max-w-[140px] py-1 "
+                placeholder="Enter Number"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && onInsert(inputValue)}
+              />
+              <div className="flex flex-wrap justify-center items-center gap-2 text-white">
+                <button
+                  className="btn-primary"
+                  onClick={() => onInsert(inputValue)}
+                >
+                  Enter
+                </button>
+                <button
+                  className="btn-danger"
+                  onClick={() => onDelete(inputValue)}
+                >
+                  Delete
+                </button>
+                <button
+                  className="btn-neutral"
+                  onClick={() => onSearch(inputValue)}
+                >
+                  Search
+                </button>
+                <button className="btn-neutral bg-purple" onClick={onRandom}>
+                  Generate Random
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-wrap justify-center items-center gap-2 px-3 py-1">
-            <Select value={algo} onValueChange={setAlgo}>
-              <SelectTrigger className="w-44 select-trigger">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent className="select-content">
-                <SelectGroup>
-                  <SelectLabel>Tree Algorithm</SelectLabel>
-                  {Object.keys(algorithms).map((a) => (
-                    <SelectItem key={a} value={a}>
-                      {a}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-
-            <div className="flex flex-wrap justify-center items-center gap-2">
-              <Select
-                value={traversal}
-                onValueChange={(val) => {
-                  setTraversal(val);
-                  const fn = traversalOptions[val];
-                  if (fn && treeRoot) {
-                    console.log(`${val}:`, fn(treeRoot));
-                  }
-                }}
-              >
+            <div className="flex flex-wrap justify-center items-center gap-2 px-3 py-1">
+              <Select value={algo} onValueChange={setAlgo}>
                 <SelectTrigger className="w-44 select-trigger">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent className="select-content">
                   <SelectGroup>
-                    <SelectLabel>Traversal</SelectLabel>
-                    {Object.keys(traversalOptions).map((a) => (
+                    <SelectLabel>Tree Algorithm</SelectLabel>
+                    {Object.keys(algorithms).map((a) => (
                       <SelectItem key={a} value={a}>
                         {a}
                       </SelectItem>
@@ -541,74 +519,96 @@ const TreePage = () => {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <button
-                className="btn-success flex h-fit w-fit px-4 py-2"
-                onClick={onRun}
-              >
-                Run
-              </button>
+
+              <div className="flex flex-wrap justify-center items-center gap-2">
+                <Select
+                  value={traversal}
+                  onValueChange={(val) => {
+                    setTraversal(val);
+                    const fn = traversalOptions[val];
+                    if (fn && treeRoot) {
+                      console.log(`${val}:`, fn(treeRoot));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-44 select-trigger">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent className="select-content">
+                    <SelectGroup>
+                      <SelectLabel>Traversal</SelectLabel>
+                      {Object.keys(traversalOptions).map((a) => (
+                        <SelectItem key={a} value={a}>
+                          {a}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <button
+                  className="btn-success flex h-fit w-fit px-4 py-2"
+                  onClick={onRun}
+                >
+                  Run
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* FIXED WRAPPER: relative positioning allows absolute children to fill perfectly */}
-      <div className="flex flex-1 min-h-0 relative w-full viz-canvas overflow-hidden bg-background">
-        <svg
-          ref={containerRef}
-          // FIXED SVG: absolute inset-0 forces it to cover the parent exactly
-          className="tree canvas border-0 absolute inset-0 w-full h-full m-0 p-0 cursor-grab active:cursor-grabbing block"
-        >
-          <g ref={zoomGroupRef}>
-            {edges.map((edge: RenderEdge) => (
-              <path
-                className="edge"
-                key={edge.id}
-                d={edge.d}
-                id={`edge-${edge.id}`}
-                stroke="var(--edge)"
-                strokeWidth="2"
-                fill="none"
-              />
-            ))}
-
-            {nodes.map((node: RenderNode) => (
-              <g
-                key={node.id}
-                className="node"
-                transform={`translate(${node.x}, ${node.y})`}
-              >
-                <circle
-                  id={`node-${node.id}`}
-                  r={24}
-                  fill="var(--node)"
-                  stroke="var(--node-stroke)"
+        {/* FIXED WRAPPER: relative positioning allows absolute children to fill perfectly */}
+        <div className="flex flex-1 min-h-0 relative w-full viz-canvas overflow-hidden bg-background">
+          <svg
+            ref={containerRef}
+            // FIXED SVG: absolute inset-0 forces it to cover the parent exactly
+            className="tree canvas border-0 absolute inset-0 w-full h-full m-0 p-0 cursor-grab active:cursor-grabbing block"
+          >
+            <g ref={zoomGroupRef}>
+              {edges.map((edge: RenderEdge) => (
+                <path
+                  className="edge"
+                  key={edge.id}
+                  d={edge.d}
+                  id={`edge-${edge.id}`}
+                  stroke="var(--edge)"
                   strokeWidth="2"
+                  fill="none"
                 />
-                <text
-                  textAnchor="middle"
-                  dy=".3em"
-                  fill="var(--text)"
-                  fontSize="16px"
-                  fontFamily="sans-serif"
-                  fontWeight="bold"
+              ))}
+
+              {nodes.map((node: RenderNode) => (
+                <g
+                  key={node.id}
+                  className="node"
+                  transform={`translate(${node.x}, ${node.y})`}
                 >
-                  {node.val}
-                </text>
-              </g>
-            ))}
-          </g>
-        </svg>
+                  <circle
+                    id={`node-${node.id}`}
+                    r={24}
+                    fill="var(--node)"
+                    stroke="var(--node-stroke)"
+                    strokeWidth="2"
+                  />
+                  <text
+                    textAnchor="middle"
+                    dy=".3em"
+                    fill="var(--text)"
+                    fontSize="16px"
+                    fontFamily="sans-serif"
+                    fontWeight="bold"
+                  >
+                    {node.val}
+                  </text>
+                </g>
+              ))}
+            </g>
+          </svg>
+        </div>
+        <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
+          <ColorLegend entries={TREE_GRAPH_LEGEND} className="px-4 py-1.5" />
+        </div>
       </div>
-      <FloatingHelper />
-      {/* Color legend */}
-      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
-        <ColorLegend
-          entries={TREE_GRAPH_LEGEND}
-          className="px-4 py-1.5"
-        />
-      </div>
-    </div>
+    </AlgoBookShell>
   );
 };
 

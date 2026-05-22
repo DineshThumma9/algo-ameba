@@ -12,7 +12,7 @@ import {
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup.ts';
 import { toast } from 'sonner';
-import FloatingHelper from '../FloatingHelper';
+import AlgoBookShell from '@/components/AlgoBookShell';
 import ColorLegend, { STACK_LEGEND } from '../ColorLegend';
 
 type Status = 'popping' | 'pushing';
@@ -373,136 +373,144 @@ const StackPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background font-audiowide">
-      {/* Navbar */}
-      <div className="flex flex-wrap justify-between items-center min-h-14 py-3 px-6 gap-3 border-0">
-        <div className="flex items-center gap-3">
-          <Input
-            className="input w-32"
-            placeholder="value"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyUp={(e) => {
-              if (e.key === 'Enter') handleOperation('push');
-            }}
-          />
-          <button
-            className="btn-primary"
-            onClick={() => handleOperation('push')}
-          >
-            Push
-          </button>
-          <div className="w-px h-6 bg-border" />
-          <div className="flex flex-wrap gap-2">
-            {options
-              .filter((o) => o !== 'push')
-              .map((op) => (
-                <button
-                  key={op}
-                  className={
-                    op === 'pop' || op === 'clear'
-                      ? 'btn-danger'
-                      : 'btn-neutral'
-                  }
-                  onClick={() => handleOperation(op)}
-                >
-                  {op}
-                </button>
-              ))}
+    <AlgoBookShell
+      algoInfo={null}
+      helper={{
+        text: phaseLabel || 'Waiting for input...',
+        defaultVisible: false,
+      }}
+    >
+      <div className="min-h-screen flex flex-col bg-background font-audiowide">
+        {/* Navbar */}
+        <div className="flex flex-wrap justify-between items-center min-h-14 py-3 px-6 gap-3 border-0">
+          <div className="flex items-center gap-3">
+            <Input
+              className="input w-32"
+              placeholder="value"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter') handleOperation('push');
+              }}
+            />
+            <button
+              className="btn-primary"
+              onClick={() => handleOperation('push')}
+            >
+              Push
+            </button>
+            <div className="w-px h-6 bg-border" />
+            <div className="flex flex-wrap gap-2">
+              {options
+                .filter((o) => o !== 'push')
+                .map((op) => (
+                  <button
+                    key={op}
+                    className={
+                      op === 'pop' || op === 'clear'
+                        ? 'btn-danger'
+                        : 'btn-neutral'
+                    }
+                    onClick={() => handleOperation(op)}
+                  >
+                    {op}
+                  </button>
+                ))}
+            </div>
+            <button className="btn-neutral" onClick={generateRandom}>
+              Generate Random
+            </button>
           </div>
-          <button className="btn-neutral" onClick={generateRandom}>
-            Generate Random
-          </button>
+
+          <Select value={algo} onValueChange={handleAlgoChange}>
+            <SelectTrigger className="w-44 select-trigger">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent className="select-content">
+              <SelectGroup>
+                <SelectLabel>Stack</SelectLabel>
+                {ALGO_OPTIONS.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {a}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
 
-        <Select value={algo} onValueChange={handleAlgoChange}>
-          <SelectTrigger className="w-44 select-trigger">
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent className="select-content">
-            <SelectGroup>
-              <SelectLabel>Stack</SelectLabel>
-              {ALGO_OPTIONS.map((a) => (
-                <SelectItem key={a} value={a}>
-                  {a}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+        {/* Main canvas */}
+        <div className="flex-1 flex canvas border-0 justify-center items-start pt-10 px-8">
+          <div className="flex flex-col items-center gap-2">
+            {/* TOP label */}
+            <span className="text-[11px] font-mono mb-1 muted-text">TOP ↓</span>
 
-      {/* Main canvas */}
-      <div className="flex-1 flex canvas border-0 justify-center items-start pt-10 px-8">
-        <div className="flex flex-col items-center gap-2">
-          {/* TOP label */}
-          <span className="text-[11px] font-mono mb-1 muted-text">TOP ↓</span>
-
-          {/* Stack column */}
-          <div
-            ref={containerRef}
-            className="w-72 flex flex-col items-center gap-2 min-h-[480px] max-h-[620px] overflow-y-auto
+            {/* Stack column */}
+            <div
+              ref={containerRef}
+              className="w-72 flex flex-col items-center gap-2 min-h-[480px] max-h-[620px] overflow-y-auto
               border-2 rounded-2xl viz-canvas px-4 py-5"
-          >
-            {stack.length === 0 && (
-              <p className="muted-text font-mono text-sm tracking-widest mt-auto mb-auto">
-                — empty —
-              </p>
-            )}
+            >
+              {stack.length === 0 && (
+                <p className="muted-text font-mono text-sm tracking-widest mt-auto mb-auto">
+                  — empty —
+                </p>
+              )}
 
-            {stack.map((item, idx) => (
-              <div
-                key={item.id}
-                ref={(el) => {
-                  if (el) itemRefs.current.set(item.id, el);
-                }}
-                className="w-full flex items-center justify-between rounded-xl viz-item px-4 py-0 flex-shrink-0 border-2 shadow-sm"
-                style={{
-                  height: 52,
-                  opacity: 0,
-                  transition: 'background-color 0.15s, box-shadow 0.15s',
-                }}
-              >
-                {/* Index badge */}
-                <span className="text-[12px] font-mono w-6 text-center rounded opacity-100">
-                  {activeS.length - 1 - idx}
-                </span>
-                {/* Value */}
-                <span className="text-xl font-bold">{item.value}</span>
-                {/* Top indicator */}
-                <span
-                  className="text-[10px] font-mono w-8 text-right font-bold"
-                  style={{ color: idx === 0 ? 'var(--brand)' : 'transparent' }}
+              {stack.map((item, idx) => (
+                <div
+                  key={item.id}
+                  ref={(el) => {
+                    if (el) itemRefs.current.set(item.id, el);
+                  }}
+                  className="w-full flex items-center justify-between rounded-xl viz-item px-4 py-0 flex-shrink-0 border-2 shadow-sm"
+                  style={{
+                    height: 52,
+                    opacity: 0,
+                    transition: 'background-color 0.15s, box-shadow 0.15s',
+                  }}
                 >
-                  top
-                </span>
-              </div>
-            ))}
-          </div>
+                  {/* Index badge */}
+                  <span className="text-[12px] font-mono w-6 text-center rounded opacity-100">
+                    {activeS.length - 1 - idx}
+                  </span>
+                  {/* Value */}
+                  <span className="text-xl font-bold">{item.value}</span>
+                  {/* Top indicator */}
+                  <span
+                    className="text-[10px] font-mono w-8 text-right font-bold"
+                    style={{
+                      color: idx === 0 ? 'var(--brand)' : 'transparent',
+                    }}
+                  >
+                    top
+                  </span>
+                </div>
+              ))}
+            </div>
 
-          {/* BOTTOM label */}
-          <span className="text-[11px] font-mono mt-1 muted-text">BOTTOM</span>
+            {/* BOTTOM label */}
+            <span className="text-[11px] font-mono mt-1 muted-text">
+              BOTTOM
+            </span>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="px-8 py-4 border-0  flex justify-between items-center panel-bg">
+          <span className="text-xs font-mono muted-text">
+            {algo.toUpperCase()}
+          </span>
+          <span className="text-xs font-mono text-brand">
+            {activeS.length} / 10 items
+          </span>
+        </footer>
+        {/* Color legend */}
+        <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
+          <ColorLegend entries={STACK_LEGEND} className="px-4 py-1.5" />
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="px-8 py-4 border-0  flex justify-between items-center panel-bg">
-        <span className="text-xs font-mono muted-text">
-          {algo.toUpperCase()}
-        </span>
-        <span className="text-xs font-mono text-brand">
-          {activeS.length} / 10 items
-        </span>
-      </footer>
-      <FloatingHelper text={phaseLabel || 'Waiting for input...'} />
-      {/* Color legend */}
-      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
-        <ColorLegend
-          entries={STACK_LEGEND}
-          className="px-4 py-1.5"
-        />
-      </div>
-    </div>
+    </AlgoBookShell>
   );
 };
 

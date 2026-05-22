@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type RefObject } from 'react';
-import { EyeIcon, XIcon, BookOpenIcon } from 'lucide-react';
+import { EyeIcon, XIcon } from 'lucide-react';
 import gsap from '../gsapSetup';
 import { Draggable } from 'gsap/Draggable';
 
@@ -12,9 +12,7 @@ export interface FloatingHelperProps {
   nextExploring?: number[];
   pathFollowed?: number[];
   algo?: string;
-  onToggleSidebar?: () => void;
-  sidebarOpen?: boolean;
-  /** When set, helper is positioned inside this container (avoids sidebar overlap). */
+  /** When set, helper is positioned inside this container. */
   boundsRef?: RefObject<HTMLElement | null>;
 }
 
@@ -25,8 +23,6 @@ const FloatingHelper = ({
   nextExploring,
   pathFollowed,
   algo,
-  onToggleSidebar,
-  sidebarOpen = false,
   boundsRef,
 }: FloatingHelperProps) => {
   const [visible, setVisible] = useState(defaultVisible);
@@ -34,42 +30,31 @@ const FloatingHelper = ({
   const draggableRef = useRef<Draggable[] | undefined>(undefined);
 
   const anchored = Boolean(boundsRef);
+  const isHidden = !text || text.trim() === '';
   const positionClass = anchored
-    ? 'absolute top-3 left-3 z-30'
-    : 'fixed top-[68px] right-3 z-50';
+    ? 'absolute top-[80px] left-3 z-30'
+    : 'fixed top-[80px] right-3 z-50';
 
   useEffect(() => {
     if (!visible || !helperRef.current) return;
-
     const bounds = boundsRef?.current ?? document.body;
-
     draggableRef.current = Draggable.create(helperRef.current, {
       type: 'x,y',
       bounds,
       zIndexBoost: false,
     });
-
     return () => {
       draggableRef.current?.forEach((d) => d.kill());
       draggableRef.current = undefined;
     };
   }, [visible, boundsRef]);
 
-  const bookButton = onToggleSidebar && !sidebarOpen && (
-    <button
-      type="button"
-      className="floating-helper-icon-btn"
-      onClick={onToggleSidebar}
-      title="Algorithm reference"
-      aria-label="Open algorithm reference"
-    >
-      <BookOpenIcon className="h-4 w-4" />
-    </button>
-  );
-
   if (!visible) {
     return (
-      <div className={`${positionClass} flex flex-col gap-2`}>
+      <div
+        className={`${positionClass} flex flex-col gap-2`}
+        style={{ display: isHidden ? 'none' : undefined }}
+      >
         <button
           type="button"
           className="floating-helper-icon-btn"
@@ -79,14 +64,15 @@ const FloatingHelper = ({
         >
           <EyeIcon className="h-5 w-5 text-brand" />
         </button>
-        {bookButton}
       </div>
     );
   }
 
   return (
-    <div className={`${positionClass} flex flex-col items-start gap-2`}>
-      {bookButton}
+    <div
+      className={`${positionClass} flex flex-col items-start gap-2`}
+      style={{ display: isHidden ? 'none' : undefined }}
+    >
       <div
         ref={helperRef}
         className="floating-helper-card w-[min(100%,320px)] cursor-move sm:max-w-[340px]"

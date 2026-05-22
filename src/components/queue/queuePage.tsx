@@ -12,7 +12,7 @@ import {
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup.ts';
 import { toast } from 'sonner';
-import FloatingHelper from '../FloatingHelper';
+import AlgoBookShell from '@/components/AlgoBookShell';
 import ColorLegend, { QUEUE_LEGEND } from '../ColorLegend';
 
 type QueueItem = { id: number; value: number };
@@ -371,161 +371,164 @@ const QueuePage = () => {
   const activeLen = queue.filter((i) => !removingIds.has(i.id)).length;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col font-audiowide">
-      {/* Navbar */}
-      <div className="flex flex-wrap justify-between items-center min-h-14 py-3 px-6 gap-3 border-0">
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            className="input w-32"
-            placeholder="value"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyUp={(e) => {
-              if (e.key === 'Enter') handleOperation('enqueue');
-            }}
-          />
-          <button
-            className="btn-primary "
-            onClick={() => handleOperation('enqueue')}
-          >
-            Enqueue
-          </button>
-          <button className="btn-neutral " onClick={generateRandomArray}>
-            Generate Random
-          </button>
-          <div className="w-px h-6 " />
-          <div className="flex gap-2 flex-wrap">
-            {options
-              .filter(
-                (o) =>
-                  o !== 'enqueue' && o !== 'enqueueFirst' && o !== 'enqueueLast'
-              )
-              .map((op) => (
-                <button
-                  key={op}
-                  className={
-                    op.includes('dequeue') || op === 'clear'
-                      ? 'btn-danger'
-                      : 'btn-neutral'
-                  }
-                  onClick={() => handleOperation(op)}
-                >
-                  {op}
-                </button>
-              ))}
-            {(options.includes('enqueueFirst') ||
-              options.includes('enqueueLast')) && (
-              <>
-                <button
-                  className="btn-primary"
-                  onClick={() => handleOperation('enqueueFirst')}
-                >
-                  Enqueue Front
-                </button>
-                <button
-                  className="btn-primary "
-                  onClick={() => handleOperation('enqueueLast')}
-                >
-                  Enqueue Back
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <Select value={selectedAlgo} onValueChange={handleAlgoChange}>
-          <SelectTrigger className="w-44 select-trigger">
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent className="select-content">
-            <SelectGroup>
-              <SelectLabel>Queue</SelectLabel>
-              {algos.map((a) => (
-                <SelectItem key={a} value={a}>
-                  {a}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Main canvas */}
-      <div className="flex-1 flex flex-col justify-center items-center px-8 py-6 gap-4">
-        {/* Direction label */}
-        <div className="flex w-full max-w-5xl justify-between text-[11px] font-mono muted-text px-1">
-          <span>FRONT</span>
-          <span>BACK</span>
-        </div>
-
-        {/* Queue row */}
-        <div
-          ref={queueContainerRef}
-          className="w-full max-w-5xl min-h-[120px] flex items-center gap-3 flex-nowrap overflow-x-auto
-            border-2 rounded-2xl viz-canvas px-6 py-5"
-        >
-          {queue.length === 0 && (
-            <p className="muted-text font-mono text-sm tracking-widest mx-auto">
-              — empty —
-            </p>
-          )}
-
-          {queue.map((item, idx) => (
-            <div
-              key={item.id}
-              ref={(el) => {
-                if (el) itemRefs.current.set(item.id, el);
+    <AlgoBookShell
+      algoInfo={null}
+      helper={{ text: phaseLabel, defaultVisible: false }}
+    >
+      <div className="min-h-screen bg-background flex flex-col font-audiowide">
+        {/* Navbar */}
+        <div className="flex flex-wrap justify-between items-center min-h-14 py-3 px-6 gap-3 border-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <Input
+              className="input w-32"
+              placeholder="value"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter') handleOperation('enqueue');
               }}
-              className="flex flex-col items-center flex-shrink-0"
-              style={{ opacity: 0 }}
+            />
+            <button
+              className="btn-primary "
+              onClick={() => handleOperation('enqueue')}
             >
-              {/* Card */}
-              <div
-                className="w-20 h-16 rounded-xl viz-item flex flex-col items-center justify-center gap-0.5 border-2 font-bold shadow-sm"
-                style={{
-                  transition: 'background-color 0.15s, box-shadow 0.15s',
-                }}
-              >
-                <span className="text-xl leading-none">{item.value}</span>
-              </div>
-              {/* Index label */}
-              <span className="text-[10px] font-mono mt-1 muted-text">
-                [
-                {selectedAlgo === 'circular queue'
-                  ? item.id % MAX_QUEUE_SIZE
-                  : idx}
-                ]
-              </span>
+              Enqueue
+            </button>
+            <button className="btn-neutral " onClick={generateRandomArray}>
+              Generate Random
+            </button>
+            <div className="w-px h-6 " />
+            <div className="flex gap-2 flex-wrap">
+              {options
+                .filter(
+                  (o) =>
+                    o !== 'enqueue' &&
+                    o !== 'enqueueFirst' &&
+                    o !== 'enqueueLast'
+                )
+                .map((op) => (
+                  <button
+                    key={op}
+                    className={
+                      op.includes('dequeue') || op === 'clear'
+                        ? 'btn-danger'
+                        : 'btn-neutral'
+                    }
+                    onClick={() => handleOperation(op)}
+                  >
+                    {op}
+                  </button>
+                ))}
+              {(options.includes('enqueueFirst') ||
+                options.includes('enqueueLast')) && (
+                <>
+                  <button
+                    className="btn-primary"
+                    onClick={() => handleOperation('enqueueFirst')}
+                  >
+                    Enqueue Front
+                  </button>
+                  <button
+                    className="btn-primary "
+                    onClick={() => handleOperation('enqueueLast')}
+                  >
+                    Enqueue Back
+                  </button>
+                </>
+              )}
             </div>
-          ))}
+          </div>
+
+          <Select value={selectedAlgo} onValueChange={handleAlgoChange}>
+            <SelectTrigger className="w-44 select-trigger">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent className="select-content">
+              <SelectGroup>
+                <SelectLabel>Queue</SelectLabel>
+                {algos.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {a}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Arrows label row */}
-        {queue.length > 0 && (
-          <div className="text-[10px] font-mono muted-text tracking-widest">
-            ← dequeue from front &nbsp;&nbsp;|&nbsp;&nbsp; enqueue to back →
+        {/* Main canvas */}
+        <div className="flex-1 flex flex-col justify-center items-center px-8 py-6 gap-4">
+          {/* Direction label */}
+          <div className="flex w-full max-w-5xl justify-between text-[11px] font-mono muted-text px-1">
+            <span>FRONT</span>
+            <span>BACK</span>
           </div>
-        )}
-      </div>
 
-      {/* Footer */}
-      <footer className="px-8 py-4 border-t flex justify-between items-center panel-bg">
-        <span className="text-xs font-mono muted-text">
-          {selectedAlgo.toUpperCase()}
-        </span>
-        <span className="text-xs font-mono text-brand">
-          {activeLen} / 10 items
-        </span>
-      </footer>
-      <FloatingHelper text={phaseLabel} />
-      {/* Color legend */}
-      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
-        <ColorLegend
-          entries={QUEUE_LEGEND}
-          className="px-4 py-1.5"
-        />
+          {/* Queue row */}
+          <div
+            ref={queueContainerRef}
+            className="w-full max-w-5xl min-h-[120px] flex items-center gap-3 flex-nowrap overflow-x-auto
+            border-2 rounded-2xl viz-canvas px-6 py-5"
+          >
+            {queue.length === 0 && (
+              <p className="muted-text font-mono text-sm tracking-widest mx-auto">
+                — empty —
+              </p>
+            )}
+
+            {queue.map((item, idx) => (
+              <div
+                key={item.id}
+                ref={(el) => {
+                  if (el) itemRefs.current.set(item.id, el);
+                }}
+                className="flex flex-col items-center flex-shrink-0"
+                style={{ opacity: 0 }}
+              >
+                {/* Card */}
+                <div
+                  className="w-20 h-16 rounded-xl viz-item flex flex-col items-center justify-center gap-0.5 border-2 font-bold shadow-sm"
+                  style={{
+                    transition: 'background-color 0.15s, box-shadow 0.15s',
+                  }}
+                >
+                  <span className="text-xl leading-none">{item.value}</span>
+                </div>
+                {/* Index label */}
+                <span className="text-[10px] font-mono mt-1 muted-text">
+                  [
+                  {selectedAlgo === 'circular queue'
+                    ? item.id % MAX_QUEUE_SIZE
+                    : idx}
+                  ]
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Arrows label row */}
+          {queue.length > 0 && (
+            <div className="text-[10px] font-mono muted-text tracking-widest">
+              ← dequeue from front &nbsp;&nbsp;|&nbsp;&nbsp; enqueue to back →
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <footer className="px-8 py-4 border-t flex justify-between items-center panel-bg">
+          <span className="text-xs font-mono muted-text">
+            {selectedAlgo.toUpperCase()}
+          </span>
+          <span className="text-xs font-mono text-brand">
+            {activeLen} / 10 items
+          </span>
+        </footer>
+        {/* Color legend */}
+        <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
+          <ColorLegend entries={QUEUE_LEGEND} className="px-4 py-1.5" />
+        </div>
       </div>
-    </div>
+    </AlgoBookShell>
   );
 };
 

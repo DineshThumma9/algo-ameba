@@ -21,23 +21,23 @@ const ColorLegend = ({ entries, className = '' }: ColorLegendProps) => {
 
   return (
     <div
-      className={`flex flex-wrap justify-center items-center gap-x-4 gap-y-2 px-3 py-2 ${className}`}
+      className={`flex flex-wrap justify-center items-center gap-x-6 gap-y-2.5 px-6 py-3 ${className}`}
     >
       {entries.map(({ color, label, glow }) => (
-        <span key={label} className="flex items-center gap-1.5 select-none">
+        <span key={label} className="flex items-center gap-2 select-none">
           {/* Swatch */}
           <span
-            className="inline-block rounded-sm flex-shrink-0"
+            className="inline-block rounded flex-shrink-0"
             style={{
-              width: 12,
-              height: 12,
+              width: 16,
+              height: 16,
               background: color,
-              boxShadow: glow ? `0 0 6px ${glow}` : undefined,
+              boxShadow: glow ? `0 0 8px ${glow}` : undefined,
             }}
           />
           {/* Label */}
           <span
-            className="font-mono text-[11px] tracking-tight whitespace-nowrap"
+            className="font-mono text-[13px] tracking-wide whitespace-nowrap font-medium"
             style={{ color: 'var(--muted-text)' }}
           >
             {label}

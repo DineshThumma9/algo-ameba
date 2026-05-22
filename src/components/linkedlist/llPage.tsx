@@ -21,7 +21,7 @@ import { ChevronDownIcon } from 'lucide-react';
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup.ts';
 import { toast } from 'sonner';
-import FloatingHelper from '../FloatingHelper';
+import AlgoBookShell from '@/components/AlgoBookShell';
 import ColorLegend, { LINKED_LIST_LEGEND } from '../ColorLegend';
 import {
   type ListConfig,
@@ -606,426 +606,428 @@ const LinkedListPage = () => {
 
   /* ── JSX ─────────────────────────────────────────────────────────────── */
   return (
-    <div
-      ref={screenRef}
-      className="flex flex-col min-h-screen shell-fg bg-background select-none"
+    <AlgoBookShell
+      algoInfo={null}
+      helper={{ text: ' ', defaultVisible: false }}
     >
-      {/* Toaster removed as per request */}
-
-      {/* shared SVG defs — arrow markers */}
-      <svg width="0" height="0" style={{ position: 'absolute' }}>
-        <defs>
-          <marker
-            id="ll-arrow"
-            markerWidth="7"
-            markerHeight="7"
-            refX="6"
-            refY="3.5"
-            orient="auto"
-          >
-            <polygon points="0 0, 7 3.5, 0 7" fill="#0e7490" />
-          </marker>
-          <marker
-            id="ll-arrow-purple"
-            markerWidth="7"
-            markerHeight="7"
-            refX="6"
-            refY="3.5"
-            orient="auto"
-          >
-            <polygon points="0 0, 7 3.5, 0 7" fill="#a78bfa" />
-          </marker>
-          <marker
-            id="ll-arrow-pink"
-            markerWidth="7"
-            markerHeight="7"
-            refX="6"
-            refY="3.5"
-            orient="auto"
-          >
-            <polygon points="0 0, 7 3.5, 0 7" fill="#ec4899" />
-          </marker>
-        </defs>
-      </svg>
-
-      {/* ── Navbar ───────────────────────────────────────────────── */}
       <div
-        ref={navRef}
-        className="algo-toolbar w-full"
+        ref={screenRef}
+        className="flex flex-col min-h-screen shell-fg bg-background select-none"
       >
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Inputs */}
-          <Input
-            className="input w-24"
-            placeholder="Value"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleOp('insertAtTail')}
-          />
-          <Input
-            className="input w-20"
-            placeholder="Index"
-            value={pos}
-            onChange={(e) => setPos(e.target.value)}
-          />
+        {/* Toaster removed as per request */}
 
-          {/* Insert ▾ dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="btn-primary flex items-center gap-1">
-                Insert <ChevronDownIcon className="w-3.5 h-3.5 opacity-70" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="dropdown-content w-44"
+        {/* shared SVG defs — arrow markers */}
+        <svg width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            <marker
+              id="ll-arrow"
+              markerWidth="7"
+              markerHeight="7"
+              refX="6"
+              refY="3.5"
+              orient="auto"
             >
-              <DropdownMenuLabel className="dropdown-label">
-                Insert position
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleOp('insertAtHead')}>
-                Insert at Head
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOp('insertAtTail')}>
-                Insert at Tail
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOp('insertAtIndex')}>
-                Insert at Index
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Delete ▾ dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="btn-danger flex items-center gap-1">
-                Delete <ChevronDownIcon className="w-3.5 h-3.5 opacity-70" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="dropdown-content w-44"
+              <polygon points="0 0, 7 3.5, 0 7" fill="#0e7490" />
+            </marker>
+            <marker
+              id="ll-arrow-purple"
+              markerWidth="7"
+              markerHeight="7"
+              refX="6"
+              refY="3.5"
+              orient="auto"
             >
-              <DropdownMenuLabel className="dropdown-label">
-                Delete position
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleOp('deleteAtHead')}>
-                Delete Head
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOp('deleteAtTail')}>
-                Delete Tail
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOp('deleteAtIndex')}>
-                Delete at Index
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <polygon points="0 0, 7 3.5, 0 7" fill="#a78bfa" />
+            </marker>
+            <marker
+              id="ll-arrow-pink"
+              markerWidth="7"
+              markerHeight="7"
+              refX="6"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon points="0 0, 7 3.5, 0 7" fill="#ec4899" />
+            </marker>
+          </defs>
+        </svg>
 
-          {/* Standalone: Reverse + Clear */}
-          <button onClick={() => handleOp('reverse')} className="btn-neutral">
-            Reverse
-          </button>
-          <button onClick={() => handleOp('clear')} className="btn-danger">
-            Clear
-          </button>
+        {/* ── Navbar ───────────────────────────────────────────────── */}
+        <div ref={navRef} className="algo-toolbar w-full">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Inputs */}
+            <Input
+              className="input w-24"
+              placeholder="Value"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleOp('insertAtTail')}
+            />
+            <Input
+              className="input w-20"
+              placeholder="Index"
+              value={pos}
+              onChange={(e) => setPos(e.target.value)}
+            />
 
-          <div className="w-px h-6 bg-border mx-1" />
+            {/* Insert ▾ dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="btn-primary flex items-center gap-1">
+                  Insert <ChevronDownIcon className="w-3.5 h-3.5 opacity-70" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="dropdown-content w-44"
+              >
+                <DropdownMenuLabel className="dropdown-label">
+                  Insert position
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleOp('insertAtHead')}>
+                  Insert at Head
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleOp('insertAtTail')}>
+                  Insert at Tail
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleOp('insertAtIndex')}>
+                  Insert at Index
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          <button onClick={generateRandom} className="btn-neutral">
-            Generate Random
-          </button>
-        </div>
+            {/* Delete ▾ dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="btn-danger flex items-center gap-1">
+                  Delete <ChevronDownIcon className="w-3.5 h-3.5 opacity-70" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="dropdown-content w-44"
+              >
+                <DropdownMenuLabel className="dropdown-label">
+                  Delete position
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleOp('deleteAtHead')}>
+                  Delete Head
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleOp('deleteAtTail')}>
+                  Delete Tail
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleOp('deleteAtIndex')}>
+                  Delete at Index
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-        <Select
-          value={listType}
-          onValueChange={(type) => switchListType(type as ListType)}
-        >
-          <SelectTrigger className="w-[200px] select-trigger">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="select-content">
-            <SelectGroup>
-              <SelectLabel>List Type</SelectLabel>
-              {(Object.keys(listTypeConfig) as ListType[]).map((type) => (
-                <SelectItem key={type} value={type}>
-                  {getConfig(type).label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+            {/* Standalone: Reverse + Clear */}
+            <button onClick={() => handleOp('reverse')} className="btn-neutral">
+              Reverse
+            </button>
+            <button onClick={() => handleOp('clear')} className="btn-danger">
+              Clear
+            </button>
 
-      {/* ── Visualization ───────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col justify-center px-4 sm:px-10 py-4 sm:py-8 overflow-hidden relative">
-        {/* HEAD pointer box */}
-        <div className="flex flex-col items-start mb-1">
-          <div
-            ref={headRef}
-            className="flex flex-col items-center justify-center w-36 h-16
-              border-2 border-transparent rounded-xl viz-ptr font-mono font-bold"
-          >
-            <span className="text-[9px] uppercase tracking-widest mb-0.5 opacity-60">
-              HEAD
-            </span>
-            <span className="text-sm font-semibold">
-              {list.length > 0 ? list[0].addr : 'NULL'}
-            </span>
+            <div className="w-px h-6 bg-border mx-1" />
+
+            <button onClick={generateRandom} className="btn-neutral">
+              Generate Random
+            </button>
           </div>
-          {/* tick down to list */}
-          <div className="w-px h-5 bg-cyan-700/50 ml-[71px]" />
+
+          <Select
+            value={listType}
+            onValueChange={(type) => switchListType(type as ListType)}
+          >
+            <SelectTrigger className="w-[200px] select-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="select-content">
+              <SelectGroup>
+                <SelectLabel>List Type</SelectLabel>
+                {(Object.keys(listTypeConfig) as ListType[]).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {getConfig(type).label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Staging node (used only during insert animation) */}
-        <div
-          ref={newNodeRef}
-          style={{
-            opacity: 0,
-            position: 'absolute',
-            top: stagingTop,
-            left: 40,
-            zIndex: 30,
-          }}
-          className="flex flex-col items-center mt-25"
-        >
-          {config.isDoubly ? (
+        {/* ── Visualization ───────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col justify-center px-4 sm:px-10 py-4 sm:py-8 overflow-hidden relative">
+          {/* HEAD pointer box */}
+          <div className="flex flex-col items-start mb-1">
             <div
-              className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-brand text-[var(--brand-foreground)] font-bold
-              items-center justify-around"
-              style={{
-                width: 'clamp(120px, 22vw, 192px)',
-                boxShadow: '0 0 15px rgba(0,255,17,0.6)',
-              }}
+              ref={headRef}
+              className="flex flex-col items-center justify-center w-36 h-16
+              border-2 border-transparent rounded-xl viz-ptr font-mono font-bold"
             >
-              <span
-                ref={newNodePrevPtrRef}
-                className="text-[10px] sm:text-xs font-mono px-1"
-              >
-                NULL
+              <span className="text-[9px] uppercase tracking-widest mb-0.5 opacity-60">
+                HEAD
               </span>
-              <div className="w-px h-8 bg-black/30" />
-              <span className="text-base sm:text-xl">-</span>
-              <div className="w-px h-8 bg-black/30" />
-              <span
-                ref={newNodeNextPtrRef}
-                className="text-[10px] sm:text-xs font-mono px-1"
-              >
-                NULL
+              <span className="text-sm font-semibold">
+                {list.length > 0 ? list[0].addr : 'NULL'}
               </span>
             </div>
-          ) : (
-            <div
-              className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-brand text-[var(--brand-foreground)] font-bold
+            {/* tick down to list */}
+            <div className="w-px h-5 bg-cyan-700/50 ml-[71px]" />
+          </div>
+
+          {/* Staging node (used only during insert animation) */}
+          <div
+            ref={newNodeRef}
+            style={{
+              opacity: 0,
+              position: 'absolute',
+              top: stagingTop,
+              left: 40,
+              zIndex: 30,
+            }}
+            className="flex flex-col items-center mt-25"
+          >
+            {config.isDoubly ? (
+              <div
+                className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-brand text-[var(--brand-foreground)] font-bold
               items-center justify-around"
-              style={{
-                width: 'clamp(100px, 18vw, 144px)',
-                boxShadow: '0 0 15px rgba(0,255,17,0.6)',
-              }}
-            >
-              <span className="text-base sm:text-xl">-</span>
-              <div className="w-px h-8 bg-black/30" />
-              <span
-                ref={newNodeNextPtrRef}
-                className="text-[10px] sm:text-xs font-mono px-1"
+                style={{
+                  width: 'clamp(120px, 22vw, 192px)',
+                  boxShadow: '0 0 15px rgba(0,255,17,0.6)',
+                }}
               >
-                NULL
-              </span>
-            </div>
-          )}
-          <span className="text-[10px] font-mono text-brand mt-1">new</span>
-        </div>
+                <span
+                  ref={newNodePrevPtrRef}
+                  className="text-[10px] sm:text-xs font-mono px-1"
+                >
+                  NULL
+                </span>
+                <div className="w-px h-8 bg-black/30" />
+                <span className="text-base sm:text-xl">-</span>
+                <div className="w-px h-8 bg-black/30" />
+                <span
+                  ref={newNodeNextPtrRef}
+                  className="text-[10px] sm:text-xs font-mono px-1"
+                >
+                  NULL
+                </span>
+              </div>
+            ) : (
+              <div
+                className="flex h-[clamp(44px,9vw,64px)] border-2 border-transparent rounded-xl bg-brand text-[var(--brand-foreground)] font-bold
+              items-center justify-around"
+                style={{
+                  width: 'clamp(100px, 18vw, 144px)',
+                  boxShadow: '0 0 15px rgba(0,255,17,0.6)',
+                }}
+              >
+                <span className="text-base sm:text-xl">-</span>
+                <div className="w-px h-8 bg-black/30" />
+                <span
+                  ref={newNodeNextPtrRef}
+                  className="text-[10px] sm:text-xs font-mono px-1"
+                >
+                  NULL
+                </span>
+              </div>
+            )}
+            <span className="text-[10px] font-mono text-brand mt-1">new</span>
+          </div>
 
-        {/* The list */}
-        <div
-          ref={listContainerRef}
-          className="flex items-end flex-nowrap overflow-x-auto pb-2"
-          style={{ minHeight: 90 }}
-        >
-          {list.length === 0 && (
-            <p className="muted-text font-mono text-sm tracking-wider self-center">
-              — empty —
-            </p>
-          )}
+          {/* The list */}
+          <div
+            ref={listContainerRef}
+            className="flex items-end flex-nowrap overflow-x-auto pb-2"
+            style={{ minHeight: 90 }}
+          >
+            {list.length === 0 && (
+              <p className="muted-text font-mono text-sm tracking-wider self-center">
+                — empty —
+              </p>
+            )}
 
-          {list.map((item, index) => {
-            const isLast = index === list.length - 1;
-            const nextAddr = isLast
-              ? config.isCircular
-                ? list[0].addr
-                : undefined
-              : list[index + 1].addr;
-            const prevAddr =
-              index === 0
-                ? config.isCircular && list.length > 1
-                  ? list[list.length - 1].addr
+            {list.map((item, index) => {
+              const isLast = index === list.length - 1;
+              const nextAddr = isLast
+                ? config.isCircular
+                  ? list[0].addr
                   : undefined
-                : list[index - 1].addr;
+                : list[index + 1].addr;
+              const prevAddr =
+                index === 0
+                  ? config.isCircular && list.length > 1
+                    ? list[list.length - 1].addr
+                    : undefined
+                  : list[index - 1].addr;
 
-            return (
-              <div key={item.id} className="flex items-center flex-shrink-0">
-                {/* node + addr label stacked */}
-                <div className="flex flex-col items-center">
-                  <div
-                    ref={(el) => {
-                      if (el) itemRefs.current.set(item.id, el);
-                    }}
-                    className="flex border-2 border-transparent rounded-xl viz-ll-node font-bold
+              return (
+                <div key={item.id} className="flex items-center flex-shrink-0">
+                  {/* node + addr label stacked */}
+                  <div className="flex flex-col items-center">
+                    <div
+                      ref={(el) => {
+                        if (el) itemRefs.current.set(item.id, el);
+                      }}
+                      className="flex border-2 border-transparent rounded-xl viz-ll-node font-bold
                       items-center justify-around"
-                    style={{
-                      width: config.isDoubly
-                        ? 'clamp(130px,22vw,200px)'
-                        : 'clamp(100px,18vw,144px)',
-                      height: 'clamp(44px,9vw,64px)',
-                      transition: 'background-color 0.15s, box-shadow 0.15s',
-                    }}
-                  >
-                    {config.isDoubly && (
-                      <>
-                        <span className="text-sm font-mono px-1">
-                          {prevAddr !== undefined ? prevAddr : 'NULL'}
-                        </span>
-                        <div className="w-px h-8 viz-ll-divider" />
-                      </>
-                    )}
+                      style={{
+                        width: config.isDoubly
+                          ? 'clamp(130px,22vw,200px)'
+                          : 'clamp(100px,18vw,144px)',
+                        height: 'clamp(44px,9vw,64px)',
+                        transition: 'background-color 0.15s, box-shadow 0.15s',
+                      }}
+                    >
+                      {config.isDoubly && (
+                        <>
+                          <span className="text-sm font-mono px-1">
+                            {prevAddr !== undefined ? prevAddr : 'NULL'}
+                          </span>
+                          <div className="w-px h-8 viz-ll-divider" />
+                        </>
+                      )}
 
-                    <span className="text-base sm:text-xl leading-none">
-                      {item.value}
-                    </span>
+                      <span className="text-base sm:text-xl leading-none">
+                        {item.value}
+                      </span>
 
-                    <div className="w-px h-8 viz-ll-divider" />
+                      <div className="w-px h-8 viz-ll-divider" />
 
-                    <span className="text-sm font-mono px-1">
-                      {nextAddr !== undefined ? nextAddr : 'NULL'}
+                      <span className="text-sm font-mono px-1">
+                        {nextAddr !== undefined ? nextAddr : 'NULL'}
+                      </span>
+                    </div>
+
+                    {/* own address below node */}
+                    <span className="text-[11px] font-mono muted-text mt-1">
+                      addr: {item.addr}
                     </span>
                   </div>
 
-                  {/* own address below node */}
-                  <span className="text-[11px] font-mono muted-text mt-1">
-                    addr: {item.addr}
-                  </span>
-                </div>
-
-                {/* arrows (next for singly/circular, both prev+next for doubly) */}
-                {config.isDoubly ? (
-                  <svg
-                    className="flex-shrink-0"
-                    width="52"
-                    height="56"
-                    viewBox="0 0 52 56"
-                  >
-                    {/* prev arrow (top) — points left. Show on all doubly nodes except first (unless circular) */}
-                    {(index > 0 || (config.isCircular && list.length > 1)) && (
-                      <line
-                        ref={(el) => {
-                          if (el) prevArrowRefs.current.set(item.id, el);
-                        }}
-                        x1="44"
-                        y1="8"
-                        x2="2"
-                        y2="8"
-                        stroke="#a78bfa"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        markerEnd="url(#ll-arrow-purple)"
-                      />
-                    )}
-                    {/* next arrow (bottom) — points right. Show on all doubly nodes except last (unless circular) */}
-                    {(index < list.length - 1 || config.isCircular) && (
-                      <line
-                        ref={(el) => {
-                          if (el) nextArrowRefs.current.set(item.id, el);
-                        }}
-                        x1="2"
-                        y1="48"
-                        x2="44"
-                        y2="48"
-                        stroke="#0e7490"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        markerEnd="url(#ll-arrow)"
-                      />
-                    )}
-                  </svg>
-                ) : (
-                  index < list.length - 1 && (
+                  {/* arrows (next for singly/circular, both prev+next for doubly) */}
+                  {config.isDoubly ? (
                     <svg
-                      className="flex-shrink-0 mb-5"
+                      className="flex-shrink-0"
                       width="52"
-                      height="28"
-                      viewBox="0 0 52 28"
+                      height="56"
+                      viewBox="0 0 52 56"
                     >
-                      <line
-                        ref={(el) => {
-                          if (el) nextArrowRefs.current.set(item.id, el);
-                        }}
-                        x1="2"
-                        y1="14"
-                        x2="44"
-                        y2="14"
-                        stroke="#0e7490"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        markerEnd="url(#ll-arrow)"
-                      />
+                      {/* prev arrow (top) — points left. Show on all doubly nodes except first (unless circular) */}
+                      {(index > 0 ||
+                        (config.isCircular && list.length > 1)) && (
+                        <line
+                          ref={(el) => {
+                            if (el) prevArrowRefs.current.set(item.id, el);
+                          }}
+                          x1="44"
+                          y1="8"
+                          x2="2"
+                          y2="8"
+                          stroke="#a78bfa"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          markerEnd="url(#ll-arrow-purple)"
+                        />
+                      )}
+                      {/* next arrow (bottom) — points right. Show on all doubly nodes except last (unless circular) */}
+                      {(index < list.length - 1 || config.isCircular) && (
+                        <line
+                          ref={(el) => {
+                            if (el) nextArrowRefs.current.set(item.id, el);
+                          }}
+                          x1="2"
+                          y1="48"
+                          x2="44"
+                          y2="48"
+                          stroke="#0e7490"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          markerEnd="url(#ll-arrow)"
+                        />
+                      )}
                     </svg>
-                  )
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  ) : (
+                    index < list.length - 1 && (
+                      <svg
+                        className="flex-shrink-0 mb-5"
+                        width="52"
+                        height="28"
+                        viewBox="0 0 52 28"
+                      >
+                        <line
+                          ref={(el) => {
+                            if (el) nextArrowRefs.current.set(item.id, el);
+                          }}
+                          x1="2"
+                          y1="14"
+                          x2="44"
+                          y2="14"
+                          stroke="#0e7490"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          markerEnd="url(#ll-arrow)"
+                        />
+                      </svg>
+                    )
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-        {/* Circular back-arrow (tail → head) for circular lists */}
-        {config.isCircular && list.length > 0 && (
-          <svg
-            style={{
-              position: 'absolute',
-              top: '100px',
-              left: '0px',
-              width: '100%',
-              height: '280px',
-              pointerEvents: 'none',
-              overflow: 'visible',
-              zIndex: 5,
-            }}
-            viewBox={`0 0 ${Math.max(800, 40 + list.length * SLOT + 150)} 280`}
-          >
-            <path
-              ref={(el) => {
-                if (el) {
-                  const length = el.getTotalLength?.() || 200;
-                  el.setAttribute('stroke-dasharray', String(length));
-                  el.setAttribute('stroke-dashoffset', String(length));
-                }
+          {/* Circular back-arrow (tail → head) for circular lists */}
+          {config.isCircular && list.length > 0 && (
+            <svg
+              style={{
+                position: 'absolute',
+                top: '100px',
+                left: '0px',
+                width: '100%',
+                height: '280px',
+                pointerEvents: 'none',
+                overflow: 'visible',
+                zIndex: 5,
               }}
-              d={`M ${40 + list.length * SLOT + 90} 140
+              viewBox={`0 0 ${Math.max(800, 40 + list.length * SLOT + 150)} 280`}
+            >
+              <path
+                ref={(el) => {
+                  if (el) {
+                    const length = el.getTotalLength?.() || 200;
+                    el.setAttribute('stroke-dasharray', String(length));
+                    el.setAttribute('stroke-dashoffset', String(length));
+                  }
+                }}
+                d={`M ${40 + list.length * SLOT + 90} 140
                   L ${40 + list.length * SLOT + 90} 220
                   Q ${(40 + list.length * SLOT + 90 + 72) / 2} 260, 72 260
                   L 72 180`}
-              fill="none"
-              stroke="#ec4899"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              markerEnd="url(#ll-arrow-pink)"
-            />
-            <text
-              x={`${(40 + list.length * SLOT + 150) / 2}`}
-              y="275"
-              fontSize="10"
-              fill="#ec4899"
-              textAnchor="middle"
-              className="font-mono font-bold"
-            >
-              ↻ circular
-            </text>
-          </svg>
-        )}
+                fill="none"
+                stroke="#ec4899"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                markerEnd="url(#ll-arrow-pink)"
+              />
+              <text
+                x={`${(40 + list.length * SLOT + 150) / 2}`}
+                y="275"
+                fontSize="10"
+                fill="#ec4899"
+                textAnchor="middle"
+                className="font-mono font-bold"
+              >
+                ↻ circular
+              </text>
+            </svg>
+          )}
 
-        {/* Legend */}
-        {/* <div className="flex gap-5 mt-8 text-[11px] font-mono muted-text">
+          {/* Legend */}
+          {/* <div className="flex gap-5 mt-8 text-[11px] font-mono muted-text">
           <span>
             <span className="text-cyan-500">■</span> active
           </span>
@@ -1052,27 +1054,24 @@ const LinkedListPage = () => {
             </span>
           )}
         </div> */}
-      </div>
+        </div>
 
-      {/* ── Footer ───────────────────────────────────────────────── */}
-      <div
-        className="flex items-center justify-between px-8 py-4 border-0 border-slate-800
+        {/* ── Footer ───────────────────────────────────────────────── */}
+        <div
+          className="flex items-center justify-between px-8 py-4 border-0 border-slate-800
         text-xs font-mono text-slate-500"
-      >
-        <span>
-          nodes: <span className="text-cyan-500">{activeLen}</span>
-        </span>
-        <span>{config.label}</span>
+        >
+          <span>
+            nodes: <span className="text-cyan-500">{activeLen}</span>
+          </span>
+          <span>{config.label}</span>
+        </div>
+        {/* Color legend */}
+        <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
+          <ColorLegend entries={LINKED_LIST_LEGEND} className="px-4 py-1.5" />
+        </div>
       </div>
-      <FloatingHelper />
-      {/* Color legend */}
-      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
-        <ColorLegend
-          entries={LINKED_LIST_LEGEND}
-          className="px-4 py-1.5"
-        />
-      </div>
-    </div>
+    </AlgoBookShell>
   );
 };
 

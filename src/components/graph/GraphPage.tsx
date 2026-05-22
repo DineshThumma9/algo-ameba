@@ -12,7 +12,7 @@ import * as d3 from 'd3';
 import { useGSAP } from '@gsap/react';
 import gsap from '../../gsapSetup';
 import { toast } from 'sonner';
-import FloatingHelper from '../FloatingHelper';
+import AlgoBookShell from '@/components/AlgoBookShell';
 import ColorLegend, { TREE_GRAPH_LEGEND } from '../ColorLegend';
 import algorithms from './graphConfig';
 import {
@@ -495,121 +495,123 @@ const GraphPage = () => {
   const currentConfig = algorithms[algo];
 
   return (
-    <div className="flex flex-col h-screen w-full shell">
-      <div className="algo-toolbar w-full mt-0 sm:px-8">
-        {/* Dynamic Inputs */}
-        <div className="left-section flex flex-wrap justify-start items-center gap-2">
-          {currentConfig.startNode && (
-            <input
-              className="input w-[120px]"
-              placeholder="Start Node"
-              value={startNode}
-              onChange={(e) => setStartNode(e.target.value)}
-            />
-          )}
+    <AlgoBookShell
+      algoInfo={null}
+      helper={{
+        text: phaseLabel || ' ',
+        nextExploring,
+        pathFollowed,
+        algo,
+        defaultVisible: false,
+      }}
+    >
+      <div className="flex flex-col h-screen w-full shell">
+        <div className="algo-toolbar w-full mt-0 sm:px-8">
+          {/* Dynamic Inputs */}
+          <div className="left-section flex flex-wrap justify-start items-center gap-2">
+            {currentConfig.startNode && (
+              <input
+                className="input w-[120px]"
+                placeholder="Start Node"
+                value={startNode}
+                onChange={(e) => setStartNode(e.target.value)}
+              />
+            )}
 
-          {currentConfig.endNode && (
-            <input
-              className="input w-[120px]"
-              placeholder="End Node"
-              value={endNode}
-              onChange={(e) => setEndNode(e.target.value)}
-            />
-          )}
+            {currentConfig.endNode && (
+              <input
+                className="input w-[120px]"
+                placeholder="End Node"
+                value={endNode}
+                onChange={(e) => setEndNode(e.target.value)}
+              />
+            )}
 
-          {(currentConfig.startNode || currentConfig.endNode) && (
-            <button className="btn-primary">Enter</button>
-          )}
+            {(currentConfig.startNode || currentConfig.endNode) && (
+              <button className="btn-primary">Enter</button>
+            )}
 
-          <div className="flex flex-wrap gap-1 ml-1">
-            <input
-              className="input max-w-[140px]"
-              placeholder="No. of Nodes"
-              value={numNodes}
-              onChange={(e) => setNumNodes(e.target.value)}
-            />
-            <button onClick={onRandom} className="btn-neutral">
-              Generate Random
+            <div className="flex flex-wrap gap-1 ml-1">
+              <input
+                className="input max-w-[140px]"
+                placeholder="No. of Nodes"
+                value={numNodes}
+                onChange={(e) => setNumNodes(e.target.value)}
+              />
+              <button onClick={onRandom} className="btn-neutral">
+                Generate Random
+              </button>
+            </div>
+
+            {/* Dynamic Property Toggles */}
+            <div className="flex flex-wrap gap-2 ml-2">
+              {currentConfig.allowedNodeTypes.includes('directed') && (
+                <button
+                  className="btn-toggle"
+                  data-active={isDirected ? 'true' : undefined}
+                  onClick={() => setIsDirected(true)}
+                >
+                  Directed
+                </button>
+              )}
+              {currentConfig.allowedNodeTypes.includes('undirected') && (
+                <button
+                  className="btn-toggle"
+                  data-active={!isDirected ? 'true' : undefined}
+                  onClick={() => setIsDirected(false)}
+                >
+                  Undirected
+                </button>
+              )}
+              {currentConfig.weighted && (
+                <button
+                  className="btn-toggle"
+                  data-active={isWeighted ? 'true' : undefined}
+                  onClick={() => setIsWeighted(!isWeighted)}
+                >
+                  {isWeighted ? 'Weighted' : 'Unweighted'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Algorithm Selector */}
+          <div className="right-section flex justify-center items-center gap-4">
+            <Select value={algo} onValueChange={setAlgo}>
+              <SelectTrigger className="w-56 select-trigger">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent className="select-content">
+                <SelectGroup>
+                  <SelectLabel>Graph Algorithm</SelectLabel>
+                  {Object.keys(algorithms).map((a) => (
+                    <SelectItem key={a} value={a}>
+                      {a}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            {/* <div className="flex w-full h-full"> */}
+            <button className="btn-success" onClick={onRun}>
+              Run
             </button>
-          </div>
-
-          {/* Dynamic Property Toggles */}
-          <div className="flex flex-wrap gap-2 ml-2">
-            {currentConfig.allowedNodeTypes.includes('directed') && (
-              <button
-                className="btn-toggle"
-                data-active={isDirected ? 'true' : undefined}
-                onClick={() => setIsDirected(true)}
-              >
-                Directed
-              </button>
-            )}
-            {currentConfig.allowedNodeTypes.includes('undirected') && (
-              <button
-                className="btn-toggle"
-                data-active={!isDirected ? 'true' : undefined}
-                onClick={() => setIsDirected(false)}
-              >
-                Undirected
-              </button>
-            )}
-            {currentConfig.weighted && (
-              <button
-                className="btn-toggle"
-                data-active={isWeighted ? 'true' : undefined}
-                onClick={() => setIsWeighted(!isWeighted)}
-              >
-                {isWeighted ? 'Weighted' : 'Unweighted'}
-              </button>
-            )}
+            {/* </div> */}
           </div>
         </div>
 
-        {/* Algorithm Selector */}
-        <div className="right-section flex justify-center items-center gap-4">
-          <Select value={algo} onValueChange={setAlgo}>
-            <SelectTrigger className="w-56 select-trigger">
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent className="select-content">
-              <SelectGroup>
-                <SelectLabel>Graph Algorithm</SelectLabel>
-                {Object.keys(algorithms).map((a) => (
-                  <SelectItem key={a} value={a}>
-                    {a}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          {/* <div className="flex w-full h-full"> */}
-          <button className="btn-success" onClick={onRun}>
-            Run
-          </button>
-          {/* </div> */}
+        <div className="flex-grow w-full flex justify-center items-center overflow-hidden">
+          <div className="flex flex-col justify-center items-center gap-2 w-full h-full relative">
+            <svg ref={graphRef} className="w-full h-full min-h-[600px]"></svg>
+          </div>
+        </div>
+
+        {/* Color legend */}
+        <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
+          <ColorLegend entries={TREE_GRAPH_LEGEND} className="px-4 py-1.5" />
         </div>
       </div>
-
-      <div className="flex-grow w-full flex justify-center items-center overflow-hidden">
-        <div className="flex flex-col justify-center items-center gap-2 w-full h-full relative">
-          <svg ref={graphRef} className="w-full h-full min-h-[600px]"></svg>
-        </div>
-      </div>
-
-      <FloatingHelper
-        text={phaseLabel}
-        nextExploring={nextExploring}
-        pathFollowed={pathFollowed}
-        algo={algo}
-      />
-      {/* Color legend */}
-      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
-        <ColorLegend
-          entries={TREE_GRAPH_LEGEND}
-          className="px-4 py-1.5"
-        />
-      </div>
-    </div>
+    </AlgoBookShell>
   );
 };
 

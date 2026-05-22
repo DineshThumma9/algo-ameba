@@ -1,6 +1,22 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { XIcon, GripVerticalIcon, ClipboardIcon, CheckIcon } from 'lucide-react';
+import { XIcon, GripVerticalIcon, CheckIcon, Copy } from 'lucide-react';
+import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light';
+import vscDarkPlus from 'react-syntax-highlighter/dist/cjs/styles/prism/vsc-dark-plus';
+import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
+import java from 'react-syntax-highlighter/dist/esm/languages/prism/java';
+import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp';
+import javascript from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
+import go from 'react-syntax-highlighter/dist/esm/languages/prism/go';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useTheme } from '@/components/ui/theme-provider';
+import oneLight from 'react-syntax-highlighter/dist/cjs/styles/prism/one-light';
 import type { AlgoInfo } from '@/constants/algoInfo';
+
+(SyntaxHighlighter as any).registerLanguage('python', python);
+(SyntaxHighlighter as any).registerLanguage('java', java);
+(SyntaxHighlighter as any).registerLanguage('cpp', cpp);
+(SyntaxHighlighter as any).registerLanguage('javascript', javascript);
+(SyntaxHighlighter as any).registerLanguage('go', go);
 
 interface AlgoSideBarProps {
   isOpen: boolean;
@@ -8,29 +24,37 @@ interface AlgoSideBarProps {
   algoInfo: AlgoInfo | null;
 }
 
-const LANG_LABELS: {
-  key: keyof AlgoInfo['implementations'];
-  label: string;
-}[] = [
-  { key: 'python', label: 'Python' },
-  { key: 'java', label: 'Java' },
-  { key: 'cpp', label: 'C++' },
-  { key: 'javascript', label: 'JavaScript' },
-  { key: 'golang', label: 'Go' },
-];
+const PRISM_LANG: Record<keyof AlgoInfo['implementations'], string> = {
+  python: 'python',
+  java: 'java',
+  cpp: 'cpp',
+  javascript: 'javascript',
+  golang: 'go',
+};
 
-const MIN_WIDTH = 320;
-const MAX_WIDTH = 560;
-const DEFAULT_WIDTH = 380;
+const LANG_LABELS: { key: keyof AlgoInfo['implementations']; label: string }[] =
+  [
+    { key: 'python', label: 'Python' },
+    { key: 'java', label: 'Java' },
+    { key: 'cpp', label: 'C++' },
+    { key: 'javascript', label: 'JS' },
+    { key: 'golang', label: 'Go' },
+  ];
 
-type MainTab = 'explanation' | 'implementation';
+const MIN_WIDTH = 360;
+const MAX_WIDTH = 620;
+const DEFAULT_WIDTH = 420;
 
 const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
-  const [mainTab, setMainTab] = useState<MainTab>('explanation');
   const [langTab, setLangTab] =
     useState<keyof AlgoInfo['implementations']>('python');
-  const [copiedLang, setCopiedLang] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const { theme } = useTheme();
+  const isDark =
+    theme === 'dark' ||
+    (theme === 'system' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
@@ -50,11 +74,9 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
     const onMove = (e: MouseEvent) => {
       if (!isDragging.current) return;
       const delta = dragStartX.current - e.clientX;
-      const next = Math.min(
-        MAX_WIDTH,
-        Math.max(MIN_WIDTH, dragStartWidth.current + delta)
+      setWidth(
+        Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, dragStartWidth.current + delta))
       );
-      setWidth(next);
     };
     const onUp = () => {
       isDragging.current = false;
@@ -67,11 +89,14 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
     };
   }, []);
 
-  const handleCopy = (lang: string, code: string) => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopiedLang(lang);
-      setTimeout(() => setCopiedLang(null), 2000);
-    });
+  const handleCopy = () => {
+    if (!algoInfo) return;
+    navigator.clipboard
+      .writeText(algoInfo.implementations[langTab])
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
   };
 
   return (
@@ -80,6 +105,7 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
       style={{ width: isOpen ? width : 0 }}
       aria-hidden={!isOpen}
     >
+      {/* Drag handle */}
       <div
         className="algo-sidebar-handle"
         onMouseDown={onHandleMouseDown}
@@ -89,6 +115,7 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
       </div>
 
       <div className="algo-sidebar-inner">
+        {/* ── Header ── */}
         <header className="algo-sidebar-header">
           <div className="min-w-0 flex-1">
             <p className="algo-sidebar-eyebrow">
@@ -106,115 +133,161 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
           </button>
         </header>
 
+        {/* ── Complexity two-column block ── */}
         {algoInfo && (
-          <div className="algo-sidebar-badges">
-            <span className="algo-badge algo-badge--time">
-              {algoInfo.complexity.time}
-            </span>
-            <span className="algo-badge algo-badge--space">
-              {algoInfo.complexity.space}
-            </span>
+          <div className="algo-complexity-block">
+            <div className="algo-complexity-item">
+              <span className="algo-complexity-label">Time Complexity</span>
+              <span className="algo-complexity-value">
+                {algoInfo.complexity.time}
+              </span>
+            </div>
+            <div className="algo-complexity-item algo-complexity-item--right">
+              <span className="algo-complexity-label">Space Complexity</span>
+              <span className="algo-complexity-value">
+                {algoInfo.complexity.space}
+              </span>
+            </div>
           </div>
         )}
 
-        <div className="algo-sidebar-tabs">
-          <div className="algo-sidebar-tablist" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mainTab === 'explanation'}
-              className={`algo-tab-trigger ${mainTab === 'explanation' ? 'algo-tab-trigger--active' : ''}`}
-              onClick={() => setMainTab('explanation')}
-            >
-              Explanation
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mainTab === 'implementation'}
-              className={`algo-tab-trigger ${mainTab === 'implementation' ? 'algo-tab-trigger--active' : ''}`}
-              onClick={() => setMainTab('implementation')}
-            >
-              Code
-            </button>
-          </div>
+        {/* ── Tabs: Explanation / Code ── */}
+        <Tabs defaultValue="explanation" className="algo-sidebar-tabs">
+          {/* Main tab bar — no bottom border, borderless */}
+          <TabsList className="algo-sidebar-tablist px-2">
+            <TabsTrigger value="explanation">Explanation</TabsTrigger>
+            <TabsTrigger value="implementation">Code</TabsTrigger>
+          </TabsList>
 
-          {mainTab === 'explanation' && (
-            <div className="algo-sidebar-panel algo-sidebar-scroll-wrap">
-              <div className="algo-sidebar-scroll">
-                {algoInfo ? (
-                  <>
-                    <p className="algo-sidebar-prose">{algoInfo.description}</p>
-                    <div>
-                      <p className="algo-sidebar-eyebrow mb-3">Steps</p>
-                      <ol className="algo-sidebar-steps">
-                        {algoInfo.steps.map((step, i) => (
-                          <li key={i}>
-                            <span className="algo-step-num">{i + 1}</span>
-                            <span className="algo-step-text">{step}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  </>
-                ) : (
-                  <p className="algo-sidebar-empty">No info available.</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {mainTab === 'implementation' && (
-            <div className="algo-sidebar-panel algo-sidebar-scroll-wrap flex min-h-0 flex-col">
+          {/* ── Explanation panel ── */}
+          <TabsContent value="explanation" className="algo-sidebar-scroll-wrap">
+            <div className="algo-sidebar-scroll algo-panel-animate">
               {algoInfo ? (
                 <>
-                  <div className="algo-sidebar-tablist shrink-0" role="tablist">
-                    {LANG_LABELS.map(({ key, label }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        role="tab"
-                        aria-selected={langTab === key}
-                        className={`algo-tab-trigger text-[11px] ${langTab === key ? 'algo-tab-trigger--active' : ''}`}
-                        onClick={() => setLangTab(key)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="algo-sidebar-scroll relative flex-1 min-h-0">
+                  <section className="algo-section">
+                    <p className="algo-section-label">Overview</p>
+                    <p className="algo-sidebar-prose">{algoInfo.description}</p>
+                  </section>
+                  <section className="algo-section">
+                    <p className="algo-section-label">How it works</p>
+                    <ol className="algo-sidebar-steps">
+                      {algoInfo.steps.map((step, i) => (
+                        <li key={i} className="algo-step-row">
+                          <span className="algo-step-num">
+                            {String(i + 1).padStart(2, '0')}
+                          </span>
+                          <span className="algo-step-text">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                </>
+              ) : (
+                <p className="algo-sidebar-empty">No info available.</p>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* ── Implementation panel ── */}
+          <TabsContent
+            value="implementation"
+            className="algo-sidebar-scroll-wrap"
+          >
+            {algoInfo ? (
+              <>
+                {/* Language underline tabs — same Tabs component, nested */}
+                <Tabs
+                  value={langTab}
+                  onValueChange={(v) =>
+                    setLangTab(v as keyof AlgoInfo['implementations'])
+                  }
+                  className="flex flex-col flex-1 min-h-0"
+                >
+                  <div className="algo-lang-tabbar">
+                    <TabsList className="gap-1">
+                      {LANG_LABELS.map(({ key, label }) => (
+                        <TabsTrigger
+                          key={key}
+                          value={key}
+                          className="px-4 py-3 text-[12px]"
+                        >
+                          {label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+
+                    {/* Copy button */}
                     <button
                       type="button"
                       className="algo-copy-btn"
-                      onClick={() =>
-                        handleCopy(langTab, algoInfo.implementations[langTab])
-                      }
+                      onClick={handleCopy}
                       title="Copy code"
                     >
-                      {copiedLang === langTab ? (
-                        <CheckIcon className="h-3 w-3 text-brand" />
+                      {copied ? (
+                        <>
+                          <CheckIcon className="h-3 w-3" />
+                          <span>Copied!</span>
+                        </>
                       ) : (
-                        <ClipboardIcon className="h-3 w-3" />
+                        <>
+                          <Copy className="h-3 w-3" />
+                        </>
                       )}
-                      <span>
-                        {copiedLang === langTab
-                          ? 'Copied'
-                          : `Copy ${LANG_LABELS.find((l) => l.key === langTab)?.label}`}
-                      </span>
                     </button>
-                    <pre className="algo-code-block">
-                      <code>{algoInfo.implementations[langTab]}</code>
-                    </pre>
                   </div>
-                </>
-              ) : (
-                <p className="algo-sidebar-empty px-5 py-4">
-                  No implementations available.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+
+                  {/* One TabsContent per language — re-keyed for animation */}
+                  {LANG_LABELS.map(({ key }) => (
+                    <TabsContent
+                      key={key}
+                      value={key}
+                      className="algo-code-wrap algo-panel-animate"
+                    >
+                      <SyntaxHighlighter
+                        language={PRISM_LANG[key]}
+                        style={isDark ? vscDarkPlus : oneLight}
+                        customStyle={{
+                          margin: 0,
+                          padding: '1.25rem 1rem',
+                          borderRadius: 0,
+                          fontSize: '14px',
+                          lineHeight: '1.7',
+                          background: isDark ? '#0e1117' : '#ffffff',
+                          height: '100%',
+                          overflowY: 'auto',
+                          overflowX: 'auto',
+                        }}
+                        codeTagProps={{
+                          style: {
+                            fontFamily:
+                              "'IBM Plex Mono', 'Fira Code', monospace",
+                          },
+                        }}
+                        showLineNumbers
+                        lineNumberStyle={{
+                          minWidth: '2.5em',
+                          paddingRight: '1em',
+                          color: isDark
+                            ? 'rgba(255,255,255,0.18)'
+                            : 'rgba(0,0,0,0.25)',
+                          userSelect: 'none',
+                          fontSize: '12px',
+                        }}
+                        wrapLongLines={false}
+                      >
+                        {algoInfo.implementations[key]}
+                      </SyntaxHighlighter>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </>
+            ) : (
+              <p className="algo-sidebar-empty px-5 py-4">
+                No implementations available.
+              </p>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </aside>
   );

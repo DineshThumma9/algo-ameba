@@ -15,7 +15,7 @@ import gsap from '../../gsapSetup';
 import { toast } from 'sonner';
 import { pushToHeap, popFromHeap, buildTreeFromArray } from './heapAlgorithms';
 import { type HeapNode, type RenderNode, type RenderEdge } from './heapTypes';
-import FloatingHelper from '../FloatingHelper';
+import AlgoBookShell from '@/components/AlgoBookShell';
 import ColorLegend, { HEAP_LEGEND } from '../ColorLegend';
 
 const HeapPage = () => {
@@ -449,116 +449,122 @@ const HeapPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background font-audiowide">
-      <div className="sticky w-full backdrop-blur z-10 border-b border-border/40">
-        <div className="flex flex-wrap items-center gap-2 px-4 py-2">
-          {/* ── Left: Input + action buttons ── */}
-          <Input
-            className="input w-[160px]"
-            placeholder="Enter number"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onInsert(inputValue)}
-          />
-
-          <button className="btn-primary" onClick={() => onInsert(inputValue)}>
-            Heappush
-          </button>
-          <button className="btn-danger" onClick={onDelete}>
-            Heappop
-          </button>
-          <button className="btn-neutral" onClick={onRandom}>
-            Random
-          </button>
-
-          {/* ── Right: Algo select + Run (pushed to far end) ── */}
-          <div className="flex items-center gap-2 ml-auto">
-            <Select value={algo} onValueChange={setAlgo}>
-              <SelectTrigger className="w-40 select-trigger">
-                <SelectValue placeholder="Heap type" />
-              </SelectTrigger>
-              <SelectContent className="select-content">
-                <SelectGroup>
-                  <SelectLabel>Heap Algorithm</SelectLabel>
-                  {algorithms.map((a) => (
-                    <SelectItem key={a} value={a}>
-                      {a}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-
-            <button className="btn-success" onClick={onRandom}>
-              Run
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-1 min-h-0 flex-row justify-center items-start viz-canvas overflow-auto bg-background">
-        <div className="flex flex-row tree-container justify-center items-start w-full min-h-full pt-5 relative">
-          <svg
-            ref={containerRef}
-            className="tree canvas flex overflow-hidden justify-center items-start border-0  w-full h-full m-0 p-0 max-h-[800px]"
-            width="100%"
-            height="100%"
-            viewBox="0 0 700 450"
-            preserveAspectRatio="xMidYMin meet"
-          >
-            <g transform="translate(350, 60)">
-              {edges.map((edge: RenderEdge) => (
-                <path
-                  className="edge"
-                  key={edge.id}
-                  d={edge.d}
-                  id={`edge-${edge.id}`}
-                  stroke="var(--edge)"
-                  strokeWidth="2"
-                  fill="none"
-                />
-              ))}
-
-              {nodes.map((node: RenderNode) => (
-                <g
-                  key={`grp-${node.id}`}
-                  className="node"
-                  transform={`translate(${node.x}, ${node.y})`}
-                >
-                  <circle
-                    id={node.id}
-                    r={20}
-                    fill="var(--node)"
-                    stroke="var(--node-stroke)"
-                    strokeWidth="2"
-                  />
-                  <text
-                    textAnchor="middle"
-                    dy=".3em"
-                    id={`text-${node.id}`}
-                    fill="var(--text)"
-                    fontSize="16px"
-                    fontFamily="sans-serif"
-                    fontWeight="bold"
-                  >
-                    {node.val}
-                  </text>
-                </g>
-              ))}
-            </g>
-          </svg>
-
-          <FloatingHelper />
-          {/* Color legend */}
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 mb-0.5">
-            <ColorLegend
-              entries={HEAP_LEGEND}
-              className="px-4 py-1.5 rounded-t-lg"
+    <AlgoBookShell
+      algoInfo={null}
+      helper={{ text: ' ', defaultVisible: false }}
+    >
+      <div className="min-h-screen flex flex-col bg-background font-audiowide">
+        <div className="sticky w-full backdrop-blur z-10 border-b border-border/40">
+          <div className="flex flex-wrap items-center gap-2 px-4 py-2">
+            {/* ── Left: Input + action buttons ── */}
+            <Input
+              className="input w-[160px]"
+              placeholder="Enter number"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onInsert(inputValue)}
             />
+
+            <button
+              className="btn-primary"
+              onClick={() => onInsert(inputValue)}
+            >
+              Heappush
+            </button>
+            <button className="btn-danger" onClick={onDelete}>
+              Heappop
+            </button>
+            <button className="btn-neutral" onClick={onRandom}>
+              Random
+            </button>
+
+            {/* ── Right: Algo select + Run (pushed to far end) ── */}
+            <div className="flex items-center gap-2 ml-auto">
+              <Select value={algo} onValueChange={setAlgo}>
+                <SelectTrigger className="w-40 select-trigger">
+                  <SelectValue placeholder="Heap type" />
+                </SelectTrigger>
+                <SelectContent className="select-content">
+                  <SelectGroup>
+                    <SelectLabel>Heap Algorithm</SelectLabel>
+                    {algorithms.map((a) => (
+                      <SelectItem key={a} value={a}>
+                        {a}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+
+              <button className="btn-success" onClick={onRandom}>
+                Run
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-1 min-h-0 flex-row justify-center items-start viz-canvas overflow-auto bg-background">
+          <div className="flex flex-row tree-container justify-center items-start w-full min-h-full pt-5 relative">
+            <svg
+              ref={containerRef}
+              className="tree canvas flex overflow-hidden justify-center items-start border-0  w-full h-full m-0 p-0 max-h-[800px]"
+              width="100%"
+              height="100%"
+              viewBox="0 0 700 450"
+              preserveAspectRatio="xMidYMin meet"
+            >
+              <g transform="translate(350, 60)">
+                {edges.map((edge: RenderEdge) => (
+                  <path
+                    className="edge"
+                    key={edge.id}
+                    d={edge.d}
+                    id={`edge-${edge.id}`}
+                    stroke="var(--edge)"
+                    strokeWidth="2"
+                    fill="none"
+                  />
+                ))}
+
+                {nodes.map((node: RenderNode) => (
+                  <g
+                    key={`grp-${node.id}`}
+                    className="node"
+                    transform={`translate(${node.x}, ${node.y})`}
+                  >
+                    <circle
+                      id={node.id}
+                      r={20}
+                      fill="var(--node)"
+                      stroke="var(--node-stroke)"
+                      strokeWidth="2"
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy=".3em"
+                      id={`text-${node.id}`}
+                      fill="var(--text)"
+                      fontSize="16px"
+                      fontFamily="sans-serif"
+                      fontWeight="bold"
+                    >
+                      {node.val}
+                    </text>
+                  </g>
+                ))}
+              </g>
+            </svg>
+
+            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 mb-0.5">
+              <ColorLegend
+                entries={HEAP_LEGEND}
+                className="px-4 py-1.5 rounded-t-lg"
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </AlgoBookShell>
   );
 };
 

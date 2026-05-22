@@ -159,18 +159,18 @@ const SharedLayout = ({
         </Select>
       </div>
 
-      {/* Visualization Area — bottom padding clears fixed legend/controller dock */}
-      <div className="flex-1 flex justify-center items-center min-h-0 pb-28 sm:pb-32">
+      {/* Visualization Area */}
+      <div className="flex-1 flex justify-center items-center min-h-0">
         {children}
       </div>
 
-      {/* Legend + playback — full-width fixed dock */}
-      <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
+      {/* Legend + Controls in the same footer band */}
+      <footer className="footer flex flex-col gap-0 w-full">
+        {/* Color legend strip — only rendered when entries are provided */}
         {legend && legend.length > 0 && (
-          <ColorLegend
-            entries={legend}
-            className="px-4 py-1.5"
-          />
+          <div className="w-full flex justify-center">
+            <ColorLegend entries={legend} />
+          </div>
         )}
         <ControllerFooter
           isPlaying={isPlaying}
@@ -183,7 +183,7 @@ const SharedLayout = ({
           onSpeedIncrease={onSpeedIncrease}
           onSpeedDecrease={onSpeedDecrease}
         />
-      </div>
+      </footer>
     </div>
   );
 };
