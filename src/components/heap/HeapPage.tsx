@@ -17,6 +17,7 @@ import { pushToHeap, popFromHeap, buildTreeFromArray } from './heapAlgorithms';
 import { type HeapNode, type RenderNode, type RenderEdge } from './heapTypes';
 import AlgoBookShell from '@/components/AlgoBookShell';
 import ColorLegend, { HEAP_LEGEND } from '../ColorLegend';
+import ControllerFooter from '@/components/ControllerFooter';
 import { HEAP_ALGO_INFO } from '@/constants/algoInfo';
 
 const HeapPage = () => {
@@ -24,8 +25,15 @@ const HeapPage = () => {
   const [algo, setAlgo] = useState('Min-Heap');
   const [inputValue, setInputValue] = useState('');
   const [activeOp, setActiveOp] = useState<'push' | 'pop'>('push');
+  const [phaseLabel, setPhaseLabel] = useState(' ');
 
   const [heap, setHeap] = useState<number[]>([]);
+
+  // ── Playback state ──────────────────────────────────────────────────────────
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState(0.75);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const labelsRef = useRef<string[]>([]);
 
   const containerRef = useRef<SVGSVGElement>(null);
 
@@ -34,10 +42,27 @@ const HeapPage = () => {
   const heapRoot = useMemo(() => buildTreeFromArray(heap), [heap]);
 
   useEffect(() => {
-    if (heap.length == 0) {
+    if (heap.length === 0) {
       onRandom();
     }
   }, [heap]);
+
+  // Clamp speed
+  const clampSpeed = (v: number) => Math.min(3, Math.max(0.25, v));
+
+  // Sync speed → GSAP timeScale
+  useEffect(() => {
+    timelineRef.current?.timeScale(speed);
+  }, [speed]);
+
+  // Initialise (and clean up) the master timeline
+  useGSAP(() => {
+    timelineRef.current = gsap.timeline({ paused: true });
+    return () => {
+      timelineRef.current?.kill();
+      timelineRef.current = null;
+    };
+  }, []);
 
   const { nodes, edges } = useMemo(() => {
     if (!heapRoot)
@@ -108,6 +133,7 @@ const HeapPage = () => {
     { scope: containerRef, dependencies: [nodes, edges] }
   );
 
+  // ── Build and register a labelled timeline into timelineRef ─────────────────
   const playPendingAnimation = (
     pending: typeof pendingAnimationRef.current,
     onComplete?: () => void
@@ -117,108 +143,123 @@ const HeapPage = () => {
       return;
     }
 
-    const heapTimeline = gsap.timeline({
-      onComplete: () => {
-        pendingAnimationRef.current = null;
-        // After push animation, commit the final (post-swap) heap state
-        if (pending.type === 'push' && finalHeapRef.current) {
-          setHeap(finalHeapRef.current);
-          finalHeapRef.current = null;
-        }
-        onComplete?.();
-      },
+    // Clear and rebuild the master timeline so controls work
+    const tl = timelineRef.current;
+    if (!tl) return;
+
+    tl.clear().pause(0);
+    labelsRef.current = [];
+
+    const addLabel = (key: string) => {
+      tl.addLabel(key);
+      labelsRef.current.push(key);
+    };
+
+    tl.eventCallback('onComplete', () => {
+      pendingAnimationRef.current = null;
+      if (pending.type === 'push' && finalHeapRef.current) {
+        setHeap(finalHeapRef.current);
+        finalHeapRef.current = null;
+      }
+      setIsPlaying(false);
+      setPhaseLabel(
+        pending.type === 'push' ? 'Push complete.' : 'Pop complete.'
+      );
+      onComplete?.();
     });
 
-    heapTimeline.addLabel('reset');
-    heapTimeline.to('.node circle', {
-      fill: 'var(--node)',
-      stroke: 'var(--node-stroke)',
-      filter: 'none',
-      scale: 1,
-      duration: 0.5,
-    });
-    heapTimeline.to(
-      '.edge',
-      { stroke: 'var(--edge)', strokeWidth: 2, duration: 0.5 },
-      '<'
+    // Step 0 – reset colours
+    addLabel('reset');
+    tl.call(
+      () =>
+        setPhaseLabel(
+          pending.type === 'push' ? 'Inserting into heap…' : 'Popping root…'
+        ),
+      undefined,
+      'reset'
     );
+    tl.to(
+      '.node circle',
+      {
+        fill: 'var(--node)',
+        stroke: 'var(--node-stroke)',
+        filter: 'none',
+        scale: 1,
+        duration: 0.4,
+      },
+      'reset'
+    );
+    tl.to(
+      '.edge',
+      { stroke: 'var(--edge)', strokeWidth: 2, duration: 0.4 },
+      'reset'
+    );
+    tl.to({}, { duration: 0.3 });
 
     if (
       pending.type === 'push' &&
       pending.animateNodes.length === 0 &&
       pending.newIndex !== undefined
     ) {
-      heapTimeline.call(
-        () => {
-          const helperText = document.getElementById('helper-text');
-          if (helperText) {
-            helperText.textContent = `Inserted at correct position (No swaps needed).`;
-          }
-        },
+      // No swaps needed — just pulse the inserted node
+      addLabel('inserted');
+      tl.call(
+        () => setPhaseLabel('Inserted at correct position (no swaps needed).'),
         undefined,
-        '<'
+        'inserted'
       );
-
-      heapTimeline.addLabel('inserted');
-      heapTimeline.to(
-        `#node-${pending.newIndex}`,
+      tl.to(
+        `#${pending.newIndex}`,
         {
           fill: 'var(--node-visited)',
-          scale: 1.12,
-          duration: 0.4,
+          scale: 1.15,
+          duration: 0.45,
           yoyo: true,
           repeat: 1,
         },
-        '<'
+        'inserted'
       );
-      heapTimeline.to(
-        `#node-${pending.newIndex}`,
-        { scale: 1.05, duration: 0.3, yoyo: true, repeat: 1 },
-        '>'
-      );
+      tl.to(`#${pending.newIndex}`, { scale: 1, duration: 0.25 });
     } else {
       pending.animateNodes.forEach(({ childIdx, parentIdx }, i) => {
-        heapTimeline.addLabel(`swap-${i}`);
+        const swapLabel = `swap-${i}`;
+        addLabel(swapLabel);
 
-        heapTimeline.call(
+        tl.call(
           () => {
-            const helperText = document.getElementById('helper-text');
-            if (helperText) {
-              // FIXED: text-node-[index]
-              const pVal = document.getElementById(
-                `text-node-${parentIdx}`
-              )?.textContent;
-              const cVal = document.getElementById(
-                `text-node-${childIdx}`
-              )?.textContent;
-              if (pVal && cVal) {
-                helperText.textContent = `Node ${cVal} is ${algo === 'Max-Heap' ? 'Greater' : 'Smaller'} than Node ${pVal} | Swap`;
-              } else {
-                helperText.textContent = `Swapping Nodes...`;
-              }
+            const pVal = document.getElementById(
+              `text-node-${parentIdx}`
+            )?.textContent;
+            const cVal = document.getElementById(
+              `text-node-${childIdx}`
+            )?.textContent;
+            if (pVal && cVal) {
+              setPhaseLabel(
+                `Node ${cVal} is ${algo === 'Max-Heap' ? 'Greater' : 'Smaller'} than Node ${pVal} → Swap`
+              );
+            } else {
+              setPhaseLabel('Swapping nodes…');
             }
           },
           undefined,
-          '<'
+          swapLabel
         );
 
-        // 1. Highlight both nodes being compared with a different color (e.g., Amber)
-        heapTimeline.to(
-          [`#node-${parentIdx}`, `#node-${childIdx}`],
+        // Highlight both nodes
+        tl.to(
+          [`#node-${childIdx}`, `#node-${parentIdx}`],
           {
             fill: '#f59e0b',
-            scale: 1.15,
-            duration: 0.8,
-            yoyo: true,
-            repeat: 1,
+            scale: 1.18,
+            duration: 0.6,
+            ease: 'back.out(1.5)',
           },
-          '>'
+          swapLabel
         );
 
-        // 2. Visually swap the text exactly at the peak of the animation
-        heapTimeline.call(
+        // Swap text at animation peak
+        tl.call(
           () => {
-            // FIXED: text-node-[index]
             const parentText = document.getElementById(
               `text-node-${parentIdx}`
             );
@@ -230,27 +271,42 @@ const HeapPage = () => {
             }
           },
           undefined,
-          '-=0.8'
+          `${swapLabel}+=0.3`
         );
 
-        // 3. Highlight the edge connecting them
+        // Highlight connecting edge
         const minIdx = Math.min(parentIdx, childIdx);
         const maxIdx = Math.max(parentIdx, childIdx);
-        heapTimeline.to(
+        tl.to(
           `#edge-${minIdx}-${maxIdx}`,
-          { stroke: 'var(--node-visited)', strokeWidth: 4, duration: 0.3 },
-          '-=0.8'
+          { stroke: 'var(--node-visited)', strokeWidth: 4, duration: 0.35 },
+          swapLabel
         );
+
+        // Settle back
+        tl.to(
+          [`#node-${childIdx}`, `#node-${parentIdx}`],
+          {
+            fill: 'var(--node-visited)',
+            scale: 1,
+            duration: 0.35,
+            ease: 'power1.out',
+          },
+          `${swapLabel}+=0.6`
+        );
+
+        tl.to({}, { duration: 0.25 });
       });
     }
 
-    heapTimeline.addLabel('cleanup');
-    heapTimeline.to(
+    // Cleanup
+    addLabel('cleanup');
+    tl.to(
       '.edge',
-      { stroke: 'var(--edge)', strokeWidth: 2, duration: 0.8 },
-      '>'
+      { stroke: 'var(--edge)', strokeWidth: 2, duration: 0.5 },
+      'cleanup'
     );
-    heapTimeline.to(
+    tl.to(
       '.node circle',
       {
         fill: 'var(--node)',
@@ -258,18 +314,15 @@ const HeapPage = () => {
         strokeWidth: 2,
         filter: 'none',
         scale: 1,
-        duration: 0.5,
+        duration: 0.4,
         ease: 'power1.out',
       },
-      '<'
+      'cleanup'
     );
-    heapTimeline.call(() => {
-      const helperText = document.getElementById('helper-text');
-      if (helperText) {
-        helperText.textContent =
-          pending.type === 'push' ? `Push complete.` : `Pop complete.`;
-      }
-    });
+
+    tl.timeScale(speed);
+    tl.play(0);
+    setIsPlaying(true);
   };
 
   const onInsert = contextSafe((val: string) => {
@@ -301,22 +354,7 @@ const HeapPage = () => {
         algo === 'Max-Heap'
       );
 
-      const helperText = document.getElementById('helper-text');
-      if (helperText) {
-        helperText.textContent = `Pushing ${num} into Heap...`;
-      }
-
-      console.log(`🔺 ${algo} Heappush: Inserting [${num}]`);
-      console.log(`  Before: [${heap.join(', ')}]`);
-
-      if (animateNodes.length > 0) {
-        const path = animateNodes
-          .map(({ childIdx }) => newHeap[childIdx])
-          .join(' ← ');
-        console.log(`  Bubble path: ${num} ← ${path}`);
-      } else {
-        console.log(`  Inserted at end (no bubbling needed)`);
-      }
+      setPhaseLabel(`Pushing ${num} into heap…`);
 
       pendingAnimationRef.current = {
         type: 'push',
@@ -324,19 +362,13 @@ const HeapPage = () => {
         newIndex: preSwapHeap.length - 1,
       };
 
-      // Store the final heap; commit it after animation completes
       finalHeapRef.current = newHeap;
 
-      // Render the pre-swap state so the animation can visually swap to the correct final state
       gsap.delayedCall(0.1, () => {
         setHeap(preSwapHeap);
       });
 
       setInputValue('');
-
-      gsap.delayedCall(0.5 + animateNodes.length * 0.6, () => {
-        console.log(`  After:  [${newHeap.join(', ')}]`);
-      });
     } else {
       let currentHeap = [...heap];
       for (const num of values) {
@@ -355,17 +387,15 @@ const HeapPage = () => {
     const lastIdx = heap.length - 1;
     const { newHeap, animateNodes } = popFromHeap(heap, algo === 'Max-Heap');
 
-    const helperText = document.getElementById('helper-text');
-    if (helperText) {
-      helperText.textContent = `Popping root (${rootValue})...`;
-    }
+    setPhaseLabel(`Popping root (${rootValue})…`);
 
     pendingAnimationRef.current = {
       type: 'pop',
       animateNodes,
     };
 
-    const tl = gsap.timeline({
+    // Root removal flash timeline (runs before the sift-down master timeline)
+    const removeTl = gsap.timeline({
       onComplete: () => {
         const pending = pendingAnimationRef.current;
         playPendingAnimation(pending, () => {
@@ -375,50 +405,48 @@ const HeapPage = () => {
     });
 
     if (heap.length === 1) {
-      tl.to('#node-0', { scale: 0, opacity: 0, duration: 0.3 });
+      removeTl.to('#node-0', { scale: 0, opacity: 0, duration: 0.3 });
       return;
     }
 
-    tl.to(
-      '#node-0',
-      {
-        fill: '#ef4444',
-        stroke: '#dc2626',
-        strokeWidth: 4,
-        filter: 'drop-shadow(0 0 12px rgba(239, 68, 68, 0.9))',
-        scale: 1.15,
-        duration: 0.5,
-        ease: 'power2.out',
-      },
-      'start'
-    ).to(
-      `#node-${lastIdx}`,
-      {
-        fill: '#22c55e',
-        stroke: '#16a34a',
-        strokeWidth: 4,
-        filter: 'drop-shadow(0 0 12px rgba(34, 197, 94, 0.9))',
-        scale: 1.15,
-        duration: 0.5,
-        ease: 'power2.out',
-      },
-      'start'
-    );
-
-    // Step 2: Swap the root text, revert root color, and hide the last node
-    // FIXED: text-node-[index]
-    tl.to(
-      `#text-node-0`,
-      {
-        textContent: String(heap[lastIdx]),
-        duration: 0, // instantaneous text swap
-      },
-      '+=0.4'
-    )
+    removeTl
       .to(
         '#node-0',
         {
-          fill: 'var(--node-visited)', // Set to visited color for the sift-down journey
+          fill: '#ef4444',
+          stroke: '#dc2626',
+          strokeWidth: 4,
+          filter: 'drop-shadow(0 0 12px rgba(239, 68, 68, 0.9))',
+          scale: 1.15,
+          duration: 0.5,
+          ease: 'power2.out',
+        },
+        'start'
+      )
+      .to(
+        `#node-${lastIdx}`,
+        {
+          fill: '#22c55e',
+          stroke: '#16a34a',
+          strokeWidth: 4,
+          filter: 'drop-shadow(0 0 12px rgba(34, 197, 94, 0.9))',
+          scale: 1.15,
+          duration: 0.5,
+          ease: 'power2.out',
+        },
+        'start'
+      );
+
+    removeTl
+      .to(
+        `#text-node-0`,
+        { textContent: String(heap[lastIdx]), duration: 0 },
+        '+=0.4'
+      )
+      .to(
+        '#node-0',
+        {
+          fill: 'var(--node-visited)',
           stroke: 'var(--node-stroke)',
           filter: 'none',
           scale: 1.1,
@@ -428,11 +456,7 @@ const HeapPage = () => {
       )
       .to(
         [`#node-${lastIdx}`, `#text-node-${lastIdx}`],
-        {
-          // FIXED: text-node-[index]
-          opacity: 0,
-          duration: 0.6,
-        },
+        { opacity: 0, duration: 0.6 },
         '<'
       );
   });
@@ -450,17 +474,49 @@ const HeapPage = () => {
     }
 
     setHeap(currentHeap);
+    // Clear controls state on new graph
+    labelsRef.current = [];
+    setIsPlaying(false);
+    setPhaseLabel(' ');
+  };
+
+  // ── Playback controls ─────────────────────────────────────────────────────
+  const playSteps = () => {
+    timelineRef.current?.play();
+    setIsPlaying(true);
+  };
+
+  const pauseSteps = () => {
+    timelineRef.current?.pause();
+    setIsPlaying(false);
+  };
+
+  const nextStep = () => {
+    const tl = timelineRef.current;
+    const labels = labelsRef.current;
+    if (!tl || isPlaying || labels.length === 0) return;
+    const ci = labels.indexOf(tl.currentLabel() ?? '');
+    tl.seek(labels[Math.min(ci < 0 ? 0 : ci + 1, labels.length - 1)]);
+  };
+
+  const prevStep = () => {
+    const tl = timelineRef.current;
+    const labels = labelsRef.current;
+    if (!tl || isPlaying || labels.length === 0) return;
+    const ci = labels.indexOf(tl.currentLabel() ?? '');
+    tl.seek(labels[Math.max(ci <= 0 ? 0 : ci - 1, 0)]);
   };
 
   return (
     <AlgoBookShell
       algoInfo={HEAP_ALGO_INFO[activeOp] ?? null}
-      helper={{ text: ' ', defaultVisible: false }}
+      helper={{ text: phaseLabel || ' ', defaultVisible: false }}
     >
-      <div className="min-h-screen flex flex-col bg-background font-audiowide">
+      <div className="flex flex-col h-screen bg-background font-audiowide shell">
+        {/* ── Toolbar ──────────────────────────────────────────────────────── */}
         <div className="sticky w-full backdrop-blur z-10 border-b border-border/40">
           <div className="flex flex-wrap items-center gap-2 px-4 py-2">
-            {/* ── Left: Input + action buttons ── */}
+            {/* Left: Input + action buttons */}
             <Input
               className="input w-[160px]"
               placeholder="Enter number"
@@ -482,9 +538,15 @@ const HeapPage = () => {
               Random
             </button>
 
-            {/* ── Right: Algo select + Run (pushed to far end) ── */}
+            {/* Right: Algo select */}
             <div className="flex items-center gap-2 ml-auto">
-              <Select value={algo} onValueChange={setAlgo}>
+              <Select
+                value={algo}
+                onValueChange={(v) => {
+                  setAlgo(v);
+                  onRandom();
+                }}
+              >
                 <SelectTrigger className="w-40 select-trigger">
                   <SelectValue placeholder="Heap type" />
                 </SelectTrigger>
@@ -499,19 +561,16 @@ const HeapPage = () => {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-
-              <button className="btn-success" onClick={onRandom}>
-                Run
-              </button>
             </div>
           </div>
         </div>
 
+        {/* ── Heap Canvas ───────────────────────────────────────────────────── */}
         <div className="flex flex-1 min-h-0 flex-row justify-center items-start viz-canvas overflow-auto bg-background">
           <div className="flex flex-row tree-container justify-center items-start w-full min-h-full pt-5 relative">
             <svg
               ref={containerRef}
-              className="tree canvas flex overflow-hidden justify-center items-start border-0  w-full h-full m-0 p-0 max-h-[800px]"
+              className="tree canvas flex overflow-hidden justify-center items-start border-0 w-full h-full m-0 p-0 max-h-[800px]"
               width="100%"
               height="100%"
               viewBox="0 0 700 450"
@@ -558,15 +617,26 @@ const HeapPage = () => {
                 ))}
               </g>
             </svg>
-
-            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 mb-0.5">
-              <ColorLegend
-                entries={HEAP_LEGEND}
-                className="px-4 py-1.5 rounded-t-lg"
-              />
-            </div>
           </div>
         </div>
+
+        {/* ── Footer: Color Legend + Controller ─────────────────────────────── */}
+        <footer className="footer flex flex-col gap-0 w-full">
+          <div className="w-full flex justify-center">
+            <ColorLegend entries={HEAP_LEGEND} className="px-4 py-1.5" />
+          </div>
+          <ControllerFooter
+            isPlaying={isPlaying}
+            onPlay={playSteps}
+            onPause={pauseSteps}
+            onNext={nextStep}
+            onPrev={prevStep}
+            speed={speed}
+            onSpeedChange={(v) => setSpeed(clampSpeed(v))}
+            onSpeedIncrease={() => setSpeed((p) => clampSpeed(p + 0.25))}
+            onSpeedDecrease={() => setSpeed((p) => clampSpeed(p - 0.25))}
+          />
+        </footer>
       </div>
     </AlgoBookShell>
   );

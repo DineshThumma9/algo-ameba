@@ -33,8 +33,6 @@ const ALGO_OPTIONS: string[] = [
   'monotonic dec stack',
 ];
 
-const PRIMARY_GLOW = '0 0 16px var(--brand)';
-
 const StackPage = () => {
   const [algo, setAlgo] = useState('stack');
   const [input, setInput] = useState('');
@@ -177,22 +175,33 @@ const StackPage = () => {
       });
     }
     const target = activeS[0];
-    setPhaseLabel(`Peeking at top value: ${target.value}`);
+    setPhaseLabel(`Peek → Top value is ${target.value}`);
     const el = getRef(target.id);
     if (el) {
-      gsap.fromTo(
-        el,
-        { boxShadow: '0 0 0px rgba(0,255,17,0)' },
-        {
-          boxShadow: PRIMARY_GLOW,
-          duration: 0.25,
-          yoyo: true,
-          repeat: 1,
-          ease: 'power1.inOut',
-        }
-      );
+      // 1. Lift the top card and flash the brand border
+      gsap.to(el, {
+        x: 10,
+        scale: 1.06,
+        borderColor: 'var(--brand)',
+        backgroundColor:
+          'color-mix(in srgb, var(--brand) 18%, var(--viz-item-bg))',
+        duration: 0.28,
+        ease: 'back.out(2)',
+      });
+      // 2. Hold
+      // 3. Settle back cleanly
+      gsap.to(el, {
+        x: 0,
+        scale: 1,
+        borderColor: 'var(--viz-item-border)',
+        backgroundColor: 'var(--viz-item-bg)',
+        delay: 0.7,
+        duration: 0.32,
+        ease: 'power2.out',
+        onComplete: () => setPhaseLabel(''),
+      });
     }
-    toast(`Top: ${activeS[0].value}`, {
+    toast(`Top: ${target.value}`, {
       position: 'bottom-right',
       closeButton: true,
     });

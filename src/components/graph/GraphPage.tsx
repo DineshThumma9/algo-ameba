@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import AlgoBookShell from '@/components/AlgoBookShell';
 import { GRAPH_ALGO_INFO } from '@/constants/algoInfo';
 import ColorLegend, { TREE_GRAPH_LEGEND } from '../ColorLegend';
+import ControllerFooter from '@/components/ControllerFooter';
 import algorithms from './graphConfig';
 import {
   runBFS,
@@ -24,6 +25,7 @@ import {
   runPrims,
   runKruskals,
 } from './graphAlgorithms';
+
 const EDGE_BASE_COLOR = '#64748b'; // slate-500: visible on light and dark backgrounds
 
 // Resolve a CSS custom property value at call-time (respects current theme)
@@ -46,7 +48,30 @@ const GraphPage = () => {
   const [nextExploring, setNextExploring] = useState<number[]>([]);
   const [phaseLabel, setPhaseLabel] = useState(' ');
 
+  // --- Playback state (mirrors SortPage) ---
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState(0.75);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const labelsRef = useRef<string[]>([]);
+
   const graphRef = useRef<SVGSVGElement>(null);
+
+  // Clamp speed within reasonable bounds
+  const clampSpeed = (v: number) => Math.min(3, Math.max(0.25, v));
+
+  // Sync speed → GSAP timeScale whenever speed changes
+  useEffect(() => {
+    timelineRef.current?.timeScale(speed);
+  }, [speed]);
+
+  // Initialise (and clean up) the master timeline once
+  useGSAP(() => {
+    timelineRef.current = gsap.timeline({ paused: true });
+    return () => {
+      timelineRef.current?.kill();
+      timelineRef.current = null;
+    };
+  }, []);
 
   // Generate random graph
   const generateRandomGraph = () => {
@@ -85,6 +110,203 @@ const GraphPage = () => {
 
   const { contextSafe } = useGSAP({ scope: graphRef });
 
+  // ── Reset timeline helpers ────────────────────────────────────────────────
+  const resetTimeline = () => {
+    timelineRef.current?.clear().pause(0);
+    labelsRef.current = [];
+    setIsPlaying(false);
+    setPhaseLabel(' ');
+    setNextExploring([]);
+    setPathFollowed([]);
+  };
+
+  // ── Build and play a labelled GSAP timeline ────────────────────────────────
+  const buildGraphTimeline = (
+    animateNodes: number[],
+    animateEdges: { source: number; target: number }[],
+    exploringStates: number[][],
+    pathStates: number[][],
+    shortestPathNodes?: number[],
+    shortestPathEdges?: { source: number; target: number }[]
+  ) => {
+    const tl = timelineRef.current;
+    if (!tl) return;
+
+    tl.clear().pause(0);
+    labelsRef.current = [];
+
+    tl.eventCallback('onComplete', () => {
+      setIsPlaying(false);
+      setPhaseLabel('Done!');
+    });
+
+    const addLabel = (key: string) => {
+      tl.addLabel(key);
+      labelsRef.current.push(key);
+    };
+
+    // --- Step 0: Reset colours ---
+    addLabel('step-reset');
+    tl.call(
+      () => {
+        setNextExploring([]);
+        setPathFollowed([]);
+        setPhaseLabel(`Initializing ${algo}…`);
+      },
+      undefined,
+      'step-reset'
+    );
+    tl.to(
+      'circle',
+      { fill: getCSSVar('--node'), duration: 0.35 },
+      'step-reset'
+    );
+    tl.to(
+      'line',
+      { stroke: EDGE_BASE_COLOR, strokeWidth: 2, duration: 0.35 },
+      'step-reset'
+    );
+    // breathing room after reset
+    tl.to({}, { duration: 0.5 });
+
+    // --- Step 1: Highlight start node ---
+    const startLabel = 'step-start';
+    addLabel(startLabel);
+    tl.call(
+      () => {
+        if (exploringStates[0]) setNextExploring(exploringStates[0]);
+        if (pathStates[0]) setPathFollowed(pathStates[0]);
+        setPhaseLabel(`Starting at node ${animateNodes[0]}`);
+      },
+      undefined,
+      startLabel
+    );
+    tl.to(
+      `#node-${animateNodes[0]}`,
+      {
+        fill: getCSSVar('--compare'),
+        scale: 1.15,
+        duration: 0.45,
+        ease: 'back.out(1.7)',
+      },
+      startLabel
+    );
+    tl.to({}, { duration: 0.4 });
+
+    // --- Steps: edge + node exploration ---
+    for (let i = 0; i < animateEdges.length; i++) {
+      const edge = animateEdges[i];
+      const nextNode = animateNodes[i + 1];
+      const stepLabel = `step-explore-${i}`;
+
+      addLabel(stepLabel);
+
+      tl.call(
+        () => {
+          if (exploringStates[i + 1]) setNextExploring(exploringStates[i + 1]);
+          if (pathStates[i + 1]) setPathFollowed(pathStates[i + 1]);
+          setPhaseLabel(`Exploring edge ${edge.source} → ${edge.target}`);
+        },
+        undefined,
+        stepLabel
+      );
+
+      // Animate the traversed edge
+      tl.to(
+        `#edge-${edge.source}-${edge.target}, #edge-${edge.target}-${edge.source}`,
+        {
+          stroke: getCSSVar('--node-visited'),
+          strokeWidth: 5,
+          duration: 0.5,
+          ease: 'power2.out',
+        },
+        stepLabel
+      );
+
+      // Animate the newly visited node  (slight stagger after edge)
+      tl.to(
+        `#node-${nextNode}`,
+        {
+          fill: getCSSVar('--node-visited'),
+          scale: 1.12,
+          duration: 0.45,
+          ease: 'back.out(1.5)',
+        },
+        `${stepLabel}+=0.25`
+      );
+
+      // Settle scale back
+      tl.to(`#node-${nextNode}`, {
+        scale: 1,
+        duration: 0.25,
+        ease: 'power1.out',
+      });
+
+      // Brief pause so each step breathes
+      tl.to({}, { duration: 0.25 });
+    }
+
+    // --- Optional: Dijkstra shortest-path highlight ---
+    if (
+      shortestPathEdges &&
+      shortestPathEdges.length > 0 &&
+      shortestPathNodes
+    ) {
+      tl.to({}, { duration: 0.6 }); // pause before path reveal
+
+      const pathRevealLabel = 'step-shortest-path';
+      addLabel(pathRevealLabel);
+      tl.call(
+        () => setPhaseLabel('Highlighting shortest path…'),
+        undefined,
+        pathRevealLabel
+      );
+
+      for (let i = 0; i < shortestPathEdges.length; i++) {
+        const edge = shortestPathEdges[i];
+        const nextNode = shortestPathNodes[i + 1];
+        const spLabel = `step-sp-${i}`;
+        addLabel(spLabel);
+
+        tl.to(
+          `#edge-${edge.source}-${edge.target}, #edge-${edge.target}-${edge.source}`,
+          {
+            stroke: getCSSVar('--node-active'),
+            strokeWidth: 7,
+            duration: 0.4,
+            ease: 'power2.inOut',
+          },
+          spLabel
+        );
+
+        if (nextNode !== undefined && nextNode !== animateNodes[0]) {
+          tl.to(
+            `#node-${nextNode}`,
+            {
+              fill: getCSSVar('--node-active'),
+              scale: 1.18,
+              duration: 0.4,
+              ease: 'back.out(1.5)',
+              onStart: () => setPhaseLabel(`Shortest path: node ${nextNode}`),
+            },
+            `${spLabel}+=0.15`
+          );
+          tl.to(`#node-${nextNode}`, {
+            scale: 1,
+            duration: 0.25,
+            ease: 'power1.out',
+          });
+        }
+
+        tl.to({}, { duration: 0.2 });
+      }
+    }
+
+    tl.timeScale(speed);
+    tl.play(0);
+    setIsPlaying(true);
+  };
+
   const onRun = contextSafe(() => {
     const startNum = parseInt(startNode);
     if (isNaN(startNum) && algorithms[algo].startNode) {
@@ -95,203 +317,65 @@ const GraphPage = () => {
       return;
     }
 
-    console.log(`Parsed Num:${startNum}`);
-
     const adjList = buildAdjList(graphData.nodes, graphData.links, isDirected);
-
-    console.log(`adj List:${adjList}`);
-
-    let animationData;
 
     if (algo === 'BFS') {
       const targetNum = endNode ? parseInt(endNode) : undefined;
-
-      animationData = runBFS(adjList, startNum, targetNum);
-    }
-
-    if (algo == 'DFS') {
+      const { animateNodes, animateEdges, exploringStates, pathStates } =
+        runBFS(adjList, startNum, targetNum);
+      buildGraphTimeline(
+        animateNodes,
+        animateEdges,
+        exploringStates,
+        pathStates
+      );
+    } else if (algo === 'DFS') {
       const targetNum = endNode ? parseInt(endNode) : undefined;
-      animationData = runDFS(adjList, startNum, targetNum);
-    }
-
-    if (algo == "Prim's Algorithm") {
-      animationData = runPrims(adjList, startNum);
-    }
-    if (algo == "Kruskal's Algorithm") {
-      animationData = runKruskals(adjList);
-    }
-
-    if (algo == "Dijkstra's Algorithm") {
+      const { animateNodes, animateEdges, exploringStates, pathStates } =
+        runDFS(adjList, startNum, targetNum);
+      buildGraphTimeline(
+        animateNodes,
+        animateEdges,
+        exploringStates,
+        pathStates
+      );
+    } else if (algo === "Prim's Algorithm") {
+      const data = runPrims(adjList, startNum);
+      if (!data) return;
+      const { animateNodes, animateEdges, exploringStates, pathStates } = data;
+      buildGraphTimeline(
+        animateNodes,
+        animateEdges,
+        exploringStates,
+        pathStates
+      );
+    } else if (algo === "Kruskal's Algorithm") {
+      const { animateNodes, animateEdges, exploringStates, pathStates } =
+        runKruskals(adjList);
+      buildGraphTimeline(
+        animateNodes,
+        animateEdges,
+        exploringStates,
+        pathStates
+      );
+    } else if (algo === "Dijkstra's Algorithm") {
       const targetNum = endNode ? parseInt(endNode) : undefined;
-      animationData = runDijstras(adjList, startNum, targetNum);
       const {
         animateNodes,
         animateEdges,
-        shortestPathNodes,
-        shortestPathEdges,
         exploringStates,
         pathStates,
-      } = animationData as any;
-
-      const tl = gsap.timeline();
-
-      // 1. Reset everything to default colors
-      tl.to('circle', {
-        fill: getCSSVar('--node'),
-        duration: 0.2,
-        onStart: () => {
-          setNextExploring([]);
-          setPathFollowed([]);
-          setPhaseLabel("Initializing Dijkstra\\'s algorithm...");
-        },
-      });
-      tl.to(
-        'line',
-        { stroke: EDGE_BASE_COLOR, strokeWidth: 2, duration: 0.2 },
-        '<'
+        shortestPathNodes,
+        shortestPathEdges,
+      } = runDijstras(adjList, startNum, targetNum) as any;
+      buildGraphTimeline(
+        animateNodes,
+        animateEdges,
+        exploringStates,
+        pathStates,
+        shortestPathNodes,
+        shortestPathEdges
       );
-
-      // 2. Highlight Start Node
-      tl.to(`#node-${animateNodes[0]}`, {
-        fill: getCSSVar('--compare'),
-        duration: 0.2,
-        onStart: () => {
-          if (exploringStates && exploringStates[0])
-            setNextExploring(exploringStates[0]);
-          if (pathStates && pathStates[0]) setPathFollowed(pathStates[0]);
-          setPhaseLabel(`Starting at node ${animateNodes[0]}`);
-        },
-      });
-
-      // 3. EXPLORATION PHASE
-      for (let i = 0; i < animateEdges.length; i++) {
-        const edge = animateEdges[i];
-        const nextNode = animateNodes[i + 1];
-
-        tl.to(
-          `#edge-${edge.source}-${edge.target}, #edge-${edge.target}-${edge.source}`,
-          {
-            stroke: EDGE_BASE_COLOR,
-            strokeWidth: 3,
-            duration: 0.15,
-          }
-        );
-
-        tl.to(`#node-${nextNode}`, {
-          fill: getCSSVar('--node-visited'),
-          duration: 0.15,
-          ease: 'power1.inOut',
-          onStart: () => {
-            if (exploringStates && exploringStates[i + 1])
-              setNextExploring(exploringStates[i + 1]);
-            if (pathStates && pathStates[i + 1])
-              setPathFollowed(pathStates[i + 1]);
-            setPhaseLabel(`Relaxing edge to node ${nextNode}`);
-          },
-        });
-      }
-
-      // 4. SHORTEST PATH PHASE (DIJKSTRA ONLY)
-      if (shortestPathEdges && shortestPathEdges.length > 0) {
-        tl.to({}, { duration: 0.5 });
-
-        for (let i = 0; i < shortestPathEdges.length; i++) {
-          const edge = shortestPathEdges[i];
-          const nextNode = shortestPathNodes[i + 1];
-
-          tl.to(
-            `#edge-${edge.source}-${edge.target}, #edge-${edge.target}-${edge.source}`,
-            {
-              stroke: getCSSVar('--node-active'),
-              strokeWidth: 6,
-              duration: 0.3,
-            }
-          );
-
-          if (nextNode !== animateNodes[0]) {
-            tl.to(
-              `#node-${nextNode}`,
-              {
-                fill: getCSSVar('--node-active'),
-                duration: 0.3,
-                ease: 'back.out(1.5)',
-                onStart: () => {
-                  setPhaseLabel(`Constructing shortest path: node ${nextNode}`);
-                },
-              },
-              '<'
-            );
-          }
-        }
-      }
-    }
-
-    console.log(`Animation data:${animationData}`);
-
-    if (!animationData) {
-      return;
-    }
-
-    const { animateNodes, animateEdges, exploringStates, pathStates } =
-      animationData as any;
-
-    const tl = gsap.timeline();
-
-    tl.to('circle', {
-      fill: getCSSVar('--node'),
-      duration: 0.2,
-      onStart: () => {
-        setNextExploring([]);
-        setPathFollowed([]);
-        setPhaseLabel(`Initializing ${algo}...`);
-      },
-    });
-    tl.to(
-      'line',
-      {
-        stroke: EDGE_BASE_COLOR,
-        strokeWidth: 2,
-        duration: 0.2,
-      },
-      '<'
-    );
-
-    tl.to(`#node-${animateNodes[0]}`, {
-      fill: getCSSVar('--compare'),
-      duration: 0.2,
-      onStart: () => {
-        if (exploringStates && exploringStates[0])
-          setNextExploring(exploringStates[0]);
-        if (pathStates && pathStates[0]) setPathFollowed(pathStates[0]);
-        setPhaseLabel(`Starting at node ${animateNodes[0]}`);
-      },
-    });
-
-    for (let i = 0; i < animateEdges.length; i++) {
-      const edge = animateEdges[i];
-      const nextNode = animateNodes[i + 1];
-
-      tl.to(
-        `#edge-${edge.source}-${edge.target}, #edge-${edge.target}-${edge.source}`,
-        {
-          stroke: getCSSVar('--node-visited'),
-          strokeWidth: 4,
-          duration: 0.4,
-        }
-      );
-
-      tl.to(`#node-${nextNode}`, {
-        fill: getCSSVar('--node-visited'),
-        duration: 0.4,
-        ease: 'back.out(1.5)',
-        onStart: () => {
-          if (exploringStates && exploringStates[i + 1])
-            setNextExploring(exploringStates[i + 1]);
-          if (pathStates && pathStates[i + 1])
-            setPathFollowed(pathStates[i + 1]);
-          setPhaseLabel(`Exploring node ${nextNode}`);
-        },
-      });
     }
   });
 
@@ -307,6 +391,9 @@ const GraphPage = () => {
 
     svg.selectAll('*').remove();
 
+    // Reset animation state whenever graph is redrawn
+    resetTimeline();
+
     // Setup arrow markers for directed graphs
     if (isDirected) {
       svg
@@ -314,7 +401,7 @@ const GraphPage = () => {
         .append('marker')
         .attr('id', 'arrowhead')
         .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 28) // Adjust to sit on edge of node radius
+        .attr('refX', 28)
         .attr('refY', 0)
         .attr('orient', 'auto')
         .attr('markerWidth', 6)
@@ -353,7 +440,7 @@ const GraphPage = () => {
       )
       .attr('stroke', EDGE_BASE_COLOR)
       .attr('stroke-width', (d: any) => Math.sqrt(d.weight || 1) * 1.5)
-      .attr('marker-end', isDirected ? 'url(#arrowhead)' : ''); // Apply arrows
+      .attr('marker-end', isDirected ? 'url(#arrowhead)' : '');
 
     const node = svg
       .append('g')
@@ -397,7 +484,6 @@ const GraphPage = () => {
       .attr('font-size', '22px')
       .attr('font-family', 'monospace');
 
-    // Only render weights if the configuration allows it AND the toggle is on
     const edgeLabels = svg
       .append('g')
       .selectAll('text')
@@ -426,7 +512,7 @@ const GraphPage = () => {
     return () => {
       simulation.stop();
     };
-  }, [graphData, isDirected, isWeighted]); // Re-render when config toggles change
+  }, [graphData, isDirected, isWeighted]);
 
   const onRandom = () => {
     const parsedInput = parseInt(numNodes);
@@ -435,10 +521,7 @@ const GraphPage = () => {
     if (!isNaN(parsedInput) && parsedInput > MAX_GRAPH_NODES) {
       toast.error(
         `Max ${MAX_GRAPH_NODES} nodes for Graph. Using ${MAX_GRAPH_NODES} instead.`,
-        {
-          position: 'bottom-right',
-          closeButton: true,
-        }
+        { position: 'bottom-right', closeButton: true }
       );
       setGraphData(generateRandomGraph());
       return;
@@ -462,7 +545,7 @@ const GraphPage = () => {
       newLinks.push({
         source: i + 1,
         target: targetNode + 1,
-        weight: isWeighted ? Math.floor(Math.random() * 20) + 1 : 1, // Default to 1 if unweighted
+        weight: isWeighted ? Math.floor(Math.random() * 20) + 1 : 1,
       });
     }
 
@@ -493,6 +576,33 @@ const GraphPage = () => {
     setGraphData({ nodes: newNodes, links: newLinks });
   };
 
+  // ── Playback controls ─────────────────────────────────────────────────────
+  const playSteps = () => {
+    timelineRef.current?.play();
+    setIsPlaying(true);
+  };
+
+  const pauseSteps = () => {
+    timelineRef.current?.pause();
+    setIsPlaying(false);
+  };
+
+  const nextStep = () => {
+    const tl = timelineRef.current;
+    const labels = labelsRef.current;
+    if (!tl || isPlaying || labels.length === 0) return;
+    const ci = labels.indexOf(tl.currentLabel() ?? '');
+    tl.seek(labels[Math.min(ci < 0 ? 0 : ci + 1, labels.length - 1)]);
+  };
+
+  const prevStep = () => {
+    const tl = timelineRef.current;
+    const labels = labelsRef.current;
+    if (!tl || isPlaying || labels.length === 0) return;
+    const ci = labels.indexOf(tl.currentLabel() ?? '');
+    tl.seek(labels[Math.max(ci <= 0 ? 0 : ci - 1, 0)]);
+  };
+
   const currentConfig = algorithms[algo];
 
   return (
@@ -507,6 +617,7 @@ const GraphPage = () => {
       }}
     >
       <div className="flex flex-col h-screen w-full shell">
+        {/* ── Toolbar ────────────────────────────────────────────────────────── */}
         <div className="algo-toolbar w-full mt-0 sm:px-8">
           {/* Dynamic Inputs */}
           <div className="left-section flex flex-wrap justify-start items-center gap-2">
@@ -576,9 +687,15 @@ const GraphPage = () => {
             </div>
           </div>
 
-          {/* Algorithm Selector */}
+          {/* Algorithm Selector + Run */}
           <div className="right-section flex justify-center items-center gap-4">
-            <Select value={algo} onValueChange={setAlgo}>
+            <Select
+              value={algo}
+              onValueChange={(v) => {
+                setAlgo(v);
+                resetTimeline();
+              }}
+            >
               <SelectTrigger className="w-56 select-trigger">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
@@ -593,24 +710,36 @@ const GraphPage = () => {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            {/* <div className="flex w-full h-full"> */}
             <button className="btn-success" onClick={onRun}>
               Run
             </button>
-            {/* </div> */}
           </div>
         </div>
 
+        {/* ── Graph Canvas ──────────────────────────────────────────────────── */}
         <div className="flex-grow w-full flex justify-center items-center overflow-hidden">
           <div className="flex flex-col justify-center items-center gap-2 w-full h-full relative">
             <svg ref={graphRef} className="w-full h-full min-h-[600px]"></svg>
           </div>
         </div>
 
-        {/* Color legend */}
-        <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
-          <ColorLegend entries={TREE_GRAPH_LEGEND} className="px-4 py-1.5" />
-        </div>
+        {/* ── Footer: Color Legend + Controller ─────────────────────────────── */}
+        <footer className="footer flex flex-col gap-0 w-full">
+          <div className="w-full flex justify-center">
+            <ColorLegend entries={TREE_GRAPH_LEGEND} className="px-4 py-1.5" />
+          </div>
+          <ControllerFooter
+            isPlaying={isPlaying}
+            onPlay={playSteps}
+            onPause={pauseSteps}
+            onNext={nextStep}
+            onPrev={prevStep}
+            speed={speed}
+            onSpeedChange={(v) => setSpeed(clampSpeed(v))}
+            onSpeedIncrease={() => setSpeed((p) => clampSpeed(p + 0.25))}
+            onSpeedDecrease={() => setSpeed((p) => clampSpeed(p - 0.25))}
+          />
+        </footer>
       </div>
     </AlgoBookShell>
   );

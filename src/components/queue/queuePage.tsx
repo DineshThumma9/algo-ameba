@@ -33,8 +33,6 @@ const algosOptionMap: Record<string, string[]> = {
   'circular queue': ['enqueue', 'dequeue', 'peek', 'clear'],
 };
 
-const PRIMARY_GLOW = '0 0 16px var(--brand)';
-
 const QueuePage = () => {
   const [selectedAlgo, setSelectedAlgo] = useState('queue');
   const [input, setInput] = useState('');
@@ -245,20 +243,49 @@ const QueuePage = () => {
       });
       return;
     }
+
+    setPhaseLabel(`Peek → Front value is ${active[0].value}`);
+
     const el = itemRefs.current.get(active[0].id);
     if (el) {
-      gsap.fromTo(
-        el,
-        { boxShadow: '0 0 0px rgba(0,255,17,0)' },
-        {
-          boxShadow: PRIMARY_GLOW,
-          duration: 0.25,
-          yoyo: true,
-          repeat: 1,
-          ease: 'power1.inOut',
-        }
-      );
+      // 1. Lift + brand border flash
+      gsap.to(el, {
+        scale: 1.12,
+        y: -6,
+        borderColor: 'var(--brand)',
+        duration: 0.3,
+        ease: 'back.out(2)',
+      });
+      // 2. Inner card colour wash (targets the inner div child)
+      const inner = el.querySelector('div') as HTMLElement | null;
+      if (inner) {
+        gsap.to(inner, {
+          backgroundColor:
+            'color-mix(in srgb, var(--brand) 22%, var(--viz-item-bg))',
+          duration: 0.3,
+          ease: 'power1.out',
+        });
+      }
+      // 3. Hold briefly then settle back
+      gsap.to(el, {
+        scale: 1,
+        y: 0,
+        borderColor: 'var(--viz-item-border)',
+        delay: 0.65,
+        duration: 0.35,
+        ease: 'power2.out',
+        onComplete: () => setPhaseLabel(''),
+      });
+      if (inner) {
+        gsap.to(inner, {
+          backgroundColor: 'var(--viz-item-bg)',
+          delay: 0.65,
+          duration: 0.35,
+          ease: 'power2.out',
+        });
+      }
     }
+
     toast(`Front: ${active[0].value}`, {
       position: 'bottom-right',
       closeButton: true,

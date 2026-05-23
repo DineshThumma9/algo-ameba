@@ -68,6 +68,8 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
       isDragging.current = true;
       dragStartX.current = e.clientX;
       dragStartWidth.current = width;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
       e.preventDefault();
     },
     [width]
@@ -82,7 +84,10 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
       );
     };
     const onUp = () => {
+      if (!isDragging.current) return;
       isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
@@ -167,6 +172,7 @@ const AlgoSideBar = ({ isOpen, onClose, algoInfo }: AlgoSideBarProps) => {
         className="algo-sidebar-handle"
         onMouseDown={onHandleMouseDown}
         title="Drag to resize"
+        style={{ cursor: 'col-resize' }}
       >
         <GripVerticalIcon className="h-3 w-3 text-muted-foreground/50" />
       </div>

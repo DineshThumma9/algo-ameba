@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import AlgoBookShell from '@/components/AlgoBookShell';
 import { TREE_ALGO_INFO } from '@/constants/algoInfo';
 import ColorLegend, { TREE_GRAPH_LEGEND } from '../ColorLegend';
+import ControllerFooter from '@/components/ControllerFooter';
 
 interface TreeNode {
   id: string;
@@ -36,7 +37,7 @@ export interface RenderEdge {
   d: string;
 }
 
-// ─── PURE ALGORITHM FUNCTIONS ────────────────────────────────────────────────
+// ─── PURE ALGORITHM FUNCTIONS ─────────────────────────────────────────────────
 
 function insertBST(node: TreeNode | null | undefined, val: number): TreeNode {
   if (!node) {
@@ -143,13 +144,20 @@ function levelOrderTraversal(root: TreeNode | null): number[] {
   return result;
 }
 
-// ─── REACT COMPONENT ────────────────────────────────────────────────────────
+// ─── REACT COMPONENT ──────────────────────────────────────────────────────────
 
 const TreePage = () => {
   const [algo, setAlgo] = useState('Binary Search Tree');
   const [traversal, setTraversal] = useState('Preorder');
   const [inputValue, setInputValue] = useState('');
   const [treeRoot, setTreeRoot] = useState<TreeNode | null>(null);
+  const [phaseLabel, setPhaseLabel] = useState(' ');
+
+  // ── Playback state ──────────────────────────────────────────────────────────
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState(0.75);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const labelsRef = useRef<string[]>([]);
 
   // Two refs needed: one for the canvas, one for the moveable group
   const containerRef = useRef<SVGSVGElement>(null);
@@ -172,7 +180,24 @@ const TreePage = () => {
     'Fenwick Tree': ['Preorder', 'Inorder', 'Postorder'],
   };
 
-  // ─── D3 LAYOUT ENGINE ───────────────────────────────────────────────────
+  // Clamp speed
+  const clampSpeed = (v: number) => Math.min(3, Math.max(0.25, v));
+
+  // Sync speed → GSAP timeScale
+  useEffect(() => {
+    timelineRef.current?.timeScale(speed);
+  }, [speed]);
+
+  // Initialise (and clean up) the master timeline
+  useGSAP(() => {
+    timelineRef.current = gsap.timeline({ paused: true });
+    return () => {
+      timelineRef.current?.kill();
+      timelineRef.current = null;
+    };
+  }, []);
+
+  // ─── D3 LAYOUT ENGINE ─────────────────────────────────────────────────────
 
   const { nodes, edges } = useMemo(() => {
     if (!treeRoot) {
@@ -211,7 +236,7 @@ const TreePage = () => {
     return { nodes: calculatedNodes, edges: calculatedEdges };
   }, [treeRoot]);
 
-  // ─── D3 PAN & ZOOM INTEGRATION ──────────────────────────────────────────
+  // ─── D3 PAN & ZOOM INTEGRATION ────────────────────────────────────────────
 
   useEffect(() => {
     if (!containerRef.current || !zoomGroupRef.current) return;
@@ -221,25 +246,22 @@ const TreePage = () => {
 
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.2, 3]) // Limit zoom from 0.2x to 3x
+      .scaleExtent([0.2, 3])
       .on('zoom', (event) => {
         zoomGroup.attr('transform', event.transform);
       });
 
     svg.call(zoom);
 
-    // Initial centering calculation
     const containerWidth =
       containerRef.current.clientWidth || window.innerWidth;
     const initialTransform = d3.zoomIdentity
       .translate(containerWidth / 2, 80)
       .scale(1);
-
-    // Apply initial transform instantly
     svg.call(zoom.transform, initialTransform);
   }, []); // Run once on mount
 
-  // ─── EFFECTS & GSAP ─────────────────────────────────────────────────────
+  // ─── EFFECTS & GSAP ───────────────────────────────────────────────────────
 
   useEffect(() => {
     if (treeRoot == null) {
@@ -285,7 +307,7 @@ const TreePage = () => {
     { scope: containerRef, dependencies: [traversal], revertOnUpdate: true }
   );
 
-  const MAX_TREE_SIZE = 40; // Increased max tree size for infinite canvas
+  const MAX_TREE_SIZE = 40;
 
   const onInsert = (val: string) => {
     const vals = val
@@ -330,6 +352,11 @@ const TreePage = () => {
       newTree = insertBST(newTree, val);
     });
     setTreeRoot(newTree);
+    // Reset controls
+    timelineRef.current?.clear().pause(0);
+    labelsRef.current = [];
+    setIsPlaying(false);
+    setPhaseLabel(' ');
   };
 
   const onDelete = contextSafe((val: string) => {
@@ -351,112 +378,139 @@ const TreePage = () => {
     setInputValue('');
   });
 
+  // ── Build and store the traversal timeline into timelineRef ─────────────────
   const onRun = contextSafe(() => {
     const traversalFn = traversalOptions[traversal];
     if (!treeRoot || !traversalFn) return;
 
-    gsap.killTweensOf(".node circle, [id*='node-']");
-    gsap.set('.node circle', {
-      fill: 'var(--node)',
-      stroke: 'var(--node-stroke)',
-      strokeWidth: 2,
-      filter: 'none',
-      r: 24, // Matches the default radius
+    const tl = timelineRef.current;
+    if (!tl) return;
+
+    tl.clear().pause(0);
+    labelsRef.current = [];
+
+    const addLabel = (key: string) => {
+      tl.addLabel(key);
+      labelsRef.current.push(key);
+    };
+
+    tl.eventCallback('onComplete', () => {
+      setIsPlaying(false);
+      setPhaseLabel(`${traversal} traversal complete!`);
     });
 
-    const sequence = traversalFn(treeRoot);
-    const pathStr = sequence.join(' → ');
-    console.log(`🌳 ${traversal} Traversal Started: [${pathStr}]`);
-
-    const timeline = gsap.timeline();
-    const nodeMap = new Map<number, string>();
-    nodes.forEach((node) => {
-      nodeMap.set(node.val, node.id);
-    });
-
-    let stepIndex = 0;
-    sequence.forEach((val) => {
-      const nodeId = nodeMap.get(val);
-      if (!nodeId) return;
-
-      const startTime = stepIndex * 1.2;
-      timeline.to(
-        `#node-${nodeId}`,
-        {
-          fill: '#fbbf24',
-          stroke: '#f59e0b',
-          strokeWidth: 3,
-          duration: 0.4,
-          ease: 'power2.out',
-          onStart: () => {
-            console.log(`  ✓ Visiting: ${val}`);
-          },
-        },
-        startTime
-      );
-
-      timeline.to(
-        `#node-${nodeId}`,
-        {
-          filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))',
-          duration: 0.3,
-          ease: 'sine.inOut',
-        },
-        startTime + 0.1
-      );
-
-      timeline.to(
-        `#node-${nodeId}`,
-        {
-          r: 30, // Updated pulse to match r=24 scaling
-          duration: 0.25,
-          ease: 'back.out',
-          yoyo: true,
-          repeat: 1,
-        },
-        startTime + 0.15
-      );
-
-      timeline.to(
-        `#node-${nodeId}`,
-        {
-          fill: '#10b981',
-          stroke: '#16a34a',
-          strokeWidth: 2,
-          filter: 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.5))',
-          duration: 0.3,
-          ease: 'power1.inOut',
-        },
-        startTime + 0.65
-      );
-
-      timeline.to({}, { duration: 0.15 }, startTime + 0.95);
-      stepIndex++;
-    });
-
-    timeline.to(
+    // Reset all node colours first
+    addLabel('step-reset');
+    tl.call(
+      () => {
+        setPhaseLabel(`Starting ${traversal} traversal…`);
+      },
+      undefined,
+      'step-reset'
+    );
+    tl.to(
       '.node circle',
       {
         fill: 'var(--node)',
         stroke: 'var(--node-stroke)',
         strokeWidth: 2,
         filter: 'none',
-        r: 24, // Matches the default radius
+        r: 24,
+        duration: 0.35,
+      },
+      'step-reset'
+    );
+    tl.to({}, { duration: 0.4 });
+
+    const sequence = traversalFn(treeRoot);
+    const pathStr = sequence.join(' → ');
+    console.log(`🌳 ${traversal} Traversal: [${pathStr}]`);
+
+    const nodeMap = new Map<number, string>();
+    nodes.forEach((node) => nodeMap.set(node.val, node.id));
+
+    sequence.forEach((val, i) => {
+      const nodeId = nodeMap.get(val);
+      if (!nodeId) return;
+
+      const stepLabel = `step-visit-${i}`;
+      addLabel(stepLabel);
+
+      tl.call(
+        () =>
+          setPhaseLabel(
+            `Visiting node ${val}  (step ${i + 1} / ${sequence.length})`
+          ),
+        undefined,
+        stepLabel
+      );
+
+      // 1. Flash amber — "currently visiting"
+      tl.to(
+        `#node-${nodeId}`,
+        {
+          fill: '#fbbf24',
+          stroke: '#f59e0b',
+          strokeWidth: 3,
+          scale: 1.15,
+          filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.8))',
+          duration: 0.4,
+          ease: 'back.out(1.7)',
+        },
+        stepLabel
+      );
+
+      // 2. Pulse radius
+      tl.to(
+        `#node-${nodeId}`,
+        { r: 30, duration: 0.22, ease: 'power2.out', yoyo: true, repeat: 1 },
+        `${stepLabel}+=0.18`
+      );
+
+      // 3. Settle to "visited" green
+      tl.to(
+        `#node-${nodeId}`,
+        {
+          fill: '#10b981',
+          stroke: '#16a34a',
+          strokeWidth: 2,
+          scale: 1,
+          r: 24,
+          filter: 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.5))',
+          duration: 0.35,
+          ease: 'power1.inOut',
+        },
+        `${stepLabel}+=0.65`
+      );
+
+      // Breathing pause between nodes
+      tl.to({}, { duration: 0.2 });
+    });
+
+    // Final cleanup — revert all to default
+    addLabel('step-cleanup');
+    tl.call(
+      () => setPhaseLabel(`${traversal}: ${pathStr}`),
+      undefined,
+      'step-cleanup'
+    );
+    tl.to(
+      '.node circle',
+      {
+        fill: 'var(--node)',
+        stroke: 'var(--node-stroke)',
+        strokeWidth: 2,
+        filter: 'none',
+        r: 24,
         duration: 0.5,
         ease: 'power1.out',
       },
-      '>-0.5'
+      '>-0.4'
     );
 
-    timeline.to(
-      {},
-      {
-        onComplete: () => {
-          console.log(`🌳 Complete: [${pathStr}]`);
-        },
-      },
-      '>'
-    );
+    tl.timeScale(speed);
+    tl.play(0);
+    setIsPlaying(true);
   });
 
   const onSearch = contextSafe((val: string) => {
@@ -482,17 +536,45 @@ const TreePage = () => {
     }
   });
 
+  // ── Playback controls ─────────────────────────────────────────────────────
+  const playSteps = () => {
+    timelineRef.current?.play();
+    setIsPlaying(true);
+  };
+
+  const pauseSteps = () => {
+    timelineRef.current?.pause();
+    setIsPlaying(false);
+  };
+
+  const nextStep = () => {
+    const tl = timelineRef.current;
+    const labels = labelsRef.current;
+    if (!tl || isPlaying || labels.length === 0) return;
+    const ci = labels.indexOf(tl.currentLabel() ?? '');
+    tl.seek(labels[Math.min(ci < 0 ? 0 : ci + 1, labels.length - 1)]);
+  };
+
+  const prevStep = () => {
+    const tl = timelineRef.current;
+    const labels = labelsRef.current;
+    if (!tl || isPlaying || labels.length === 0) return;
+    const ci = labels.indexOf(tl.currentLabel() ?? '');
+    tl.seek(labels[Math.max(ci <= 0 ? 0 : ci - 1, 0)]);
+  };
+
   return (
     <AlgoBookShell
       algoInfo={TREE_ALGO_INFO[traversal.toLowerCase()] ?? null}
-      helper={{ text: ' ', defaultVisible: false }}
+      helper={{ text: phaseLabel || ' ', defaultVisible: false }}
     >
-      <div className="min-h-screen flex flex-col bg-background font-audiowide">
+      <div className="flex flex-col h-screen bg-background font-audiowide shell">
+        {/* ── Toolbar ──────────────────────────────────────────────────────── */}
         <div className="algo-toolbar">
           <div className="flex flex-wrap justify-between items-center gap-2 w-full">
             <div className="flex flex-wrap justify-start items-center gap-2 px-3 py-1 mx-2">
               <Input
-                className="input w-fit  px-2 max-w-[140px] py-1 "
+                className="input w-fit px-2 max-w-[140px] py-1"
                 placeholder="Enter Number"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -545,6 +627,11 @@ const TreePage = () => {
                   value={traversal}
                   onValueChange={(val) => {
                     setTraversal(val);
+                    // Reset timeline on traversal switch
+                    timelineRef.current?.clear().pause(0);
+                    labelsRef.current = [];
+                    setIsPlaying(false);
+                    setPhaseLabel(' ');
                     const fn = traversalOptions[val];
                     if (fn && treeRoot) {
                       console.log(`${val}:`, fn(treeRoot));
@@ -576,11 +663,10 @@ const TreePage = () => {
           </div>
         </div>
 
-        {/* FIXED WRAPPER: relative positioning allows absolute children to fill perfectly */}
+        {/* ── Tree Canvas ───────────────────────────────────────────────────── */}
         <div className="flex flex-1 min-h-0 relative w-full viz-canvas overflow-hidden bg-background">
           <svg
             ref={containerRef}
-            // FIXED SVG: absolute inset-0 forces it to cover the parent exactly
             className="tree canvas border-0 absolute inset-0 w-full h-full m-0 p-0 cursor-grab active:cursor-grabbing block"
           >
             <g ref={zoomGroupRef}>
@@ -624,9 +710,24 @@ const TreePage = () => {
             </g>
           </svg>
         </div>
-        <div className="color-legend-fixed fixed bottom-0 left-0 z-40 w-full">
-          <ColorLegend entries={TREE_GRAPH_LEGEND} className="px-4 py-1.5" />
-        </div>
+
+        {/* ── Footer: Color Legend + Controller ─────────────────────────────── */}
+        <footer className="footer flex flex-col gap-0 w-full">
+          <div className="w-full flex justify-center">
+            <ColorLegend entries={TREE_GRAPH_LEGEND} className="px-4 py-1.5" />
+          </div>
+          <ControllerFooter
+            isPlaying={isPlaying}
+            onPlay={playSteps}
+            onPause={pauseSteps}
+            onNext={nextStep}
+            onPrev={prevStep}
+            speed={speed}
+            onSpeedChange={(v) => setSpeed(clampSpeed(v))}
+            onSpeedIncrease={() => setSpeed((p) => clampSpeed(p + 0.25))}
+            onSpeedDecrease={() => setSpeed((p) => clampSpeed(p - 0.25))}
+          />
+        </footer>
       </div>
     </AlgoBookShell>
   );
