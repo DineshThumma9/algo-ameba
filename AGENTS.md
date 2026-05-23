@@ -44,16 +44,16 @@ This file defines how coding agents should work in this repository.
 
 Each algorithm category lives in its own folder under `src/components/`:
 
-| Category    | Logic file                          | View file                        |
-| ----------- | ----------------------------------- | -------------------------------- |
-| Sort        | `sort/SortAlgos.ts`                 | `sort/SortPage.tsx`              |
-| Search      | `search/searchAlgorithms.ts`        | `search/SearchPage.tsx`          |
-| Graph       | `graph/graphAlgorithms.ts`          | `graph/GraphPage.tsx`            |
-| Tree        | _(inline in page)_                  | `tree/TreePage.tsx`              |
-| Heap        | `heap/heapAlgorithms.ts`            | `heap/HeapPage.tsx`              |
-| Stack       | `stack/stackAlgos.ts`               | `stack/stackPage.tsx`            |
-| Queue       | `queue/queueAlgo.ts`                | `queue/queuePage.tsx`            |
-| Linked List | `linkedlist/llalgo.ts`              | `linkedlist/llPage.tsx`          |
+| Category    | Logic file                   | View file               |
+| ----------- | ---------------------------- | ----------------------- |
+| Sort        | `sort/SortAlgos.ts`          | `sort/SortPage.tsx`     |
+| Search      | `search/searchAlgorithms.ts` | `search/SearchPage.tsx` |
+| Graph       | `graph/graphAlgorithms.ts`   | `graph/GraphPage.tsx`   |
+| Tree        | _(inline in page)_           | `tree/TreePage.tsx`     |
+| Heap        | `heap/heapAlgorithms.ts`     | `heap/HeapPage.tsx`     |
+| Stack       | `stack/stackAlgos.ts`        | `stack/stackPage.tsx`   |
+| Queue       | `queue/queueAlgo.ts`         | `queue/queuePage.tsx`   |
+| Linked List | `linkedlist/llalgo.ts`       | `linkedlist/llPage.tsx` |
 
 - Do not add separate page components for each algorithm variant unless explicitly requested.
 - Prefer algorithm registries/maps over switch-heavy duplicated UI files.

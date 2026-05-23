@@ -24,13 +24,13 @@ Algo Ameba visualizes algorithms with **frame-by-frame animations**, letting you
 
 ### 🔃 Sorting
 
-| Algorithm       | Visualization highlights                             |
-| --------------- | ---------------------------------------------------- |
-| Bubble Sort     | Pairwise comparison flashes, swap animation          |
-| Selection Sort  | Minimum scan highlight, in-place placement           |
-| Insertion Sort  | Shift animation, building sorted prefix step-by-step |
-| Merge Sort      | Split/merge tree with placed-element bloom           |
-| Quick Sort      | Gold pivot crown, partitioning range highlight       |
+| Algorithm      | Visualization highlights                             |
+| -------------- | ---------------------------------------------------- |
+| Bubble Sort    | Pairwise comparison flashes, swap animation          |
+| Selection Sort | Minimum scan highlight, in-place placement           |
+| Insertion Sort | Shift animation, building sorted prefix step-by-step |
+| Merge Sort     | Split/merge tree with placed-element bloom           |
+| Quick Sort     | Gold pivot crown, partitioning range highlight       |
 
 ### 🔍 Searching
 
@@ -41,56 +41,56 @@ Algo Ameba visualizes algorithms with **frame-by-frame animations**, letting you
 
 ### 🌲 Trees
 
-| Algorithm / Operation | Visualization highlights                          |
-| --------------------- | ------------------------------------------------- |
-| Insert / Delete       | Node spring-in / fade-out animations              |
-| BST Search            | Path highlight to found node                      |
-| Preorder Traversal    | Amber visit flash → green settled state           |
-| Inorder Traversal     | ″                                                 |
-| Postorder Traversal   | ″                                                 |
-| Level-order Traversal | ″                                                 |
+| Algorithm / Operation | Visualization highlights                |
+| --------------------- | --------------------------------------- |
+| Insert / Delete       | Node spring-in / fade-out animations    |
+| BST Search            | Path highlight to found node            |
+| Preorder Traversal    | Amber visit flash → green settled state |
+| Inorder Traversal     | ″                                       |
+| Postorder Traversal   | ″                                       |
+| Level-order Traversal | ″                                       |
 
 ### 🏔️ Heap
 
-| Operation  | Visualization highlights                           |
-| ---------- | -------------------------------------------------- |
-| Heappush   | Insert animation + sift-up swap sequence           |
-| Heappop    | Root removal flash + sift-down swap sequence       |
-| Min / Max  | Both variants supported with per-step playback     |
+| Operation | Visualization highlights                       |
+| --------- | ---------------------------------------------- |
+| Heappush  | Insert animation + sift-up swap sequence       |
+| Heappop   | Root removal flash + sift-down swap sequence   |
+| Min / Max | Both variants supported with per-step playback |
 
 ### 🕸️ Graph
 
-| Algorithm    | Visualization highlights                         |
-| ------------ | ------------------------------------------------ |
-| BFS          | Queue-driven level-by-level node discovery       |
-| DFS          | Stack-driven deep-dive path highlight            |
-| Dijkstra's   | Shortest-path revelation with edge weight labels |
-| Prim's MST   | Growing spanning tree with edge selection        |
-| Kruskal's    | Edge-sorted union-find with cycle detection      |
+| Algorithm  | Visualization highlights                         |
+| ---------- | ------------------------------------------------ |
+| BFS        | Queue-driven level-by-level node discovery       |
+| DFS        | Stack-driven deep-dive path highlight            |
+| Dijkstra's | Shortest-path revelation with edge weight labels |
+| Prim's MST | Growing spanning tree with edge selection        |
+| Kruskal's  | Edge-sorted union-find with cycle detection      |
 
 ### 📦 Linear Data Structures
 
-| Structure   | Operations                                          |
-| ----------- | --------------------------------------------------- |
-| Stack       | Push, pop, peek — with monotonic stack variants     |
+| Structure   | Operations                                                        |
+| ----------- | ----------------------------------------------------------------- |
+| Stack       | Push, pop, peek — with monotonic stack variants                   |
 | Queue       | Enqueue, dequeue, peek — with deque, monotonic, circular variants |
-| Linked List | Insert, delete, traverse — singly, doubly, circular |
+| Linked List | Insert, delete, traverse — singly, doubly, circular               |
 
 ---
 
 ## 🛠 Tech Stack
 
-| Layer             | Technology                                          |
-| ----------------- | --------------------------------------------------- |
-| **Frontend**      | React 19, TypeScript 5.8                            |
-| **Routing**       | React Router 7                                      |
-| **Animation**     | GSAP 3.13 + `@gsap/react`, Flip plugin              |
-| **Visualization** | D3 7 (hierarchy, tree, force layouts), Custom SVG   |
-| **Styling**       | Tailwind CSS 4, Radix UI primitives                 |
-| **UI Components** | shadcn/ui (button, input, select, tabs, dropdown)   |
-| **Notifications** | Sonner                                              |
-| **Build**         | Vite 7                                              |
-| **Linting**       | ESLint + Prettier                                   |
+| Layer             | Technology                                        |
+| ----------------- | ------------------------------------------------- |
+| **Frontend**      | React 19, TypeScript 5.8                          |
+| **Routing**       | React Router 7                                    |
+| **Animation**     | GSAP 3.13 + `@gsap/react`, Flip plugin            |
+| **Visualization** | D3 7 (hierarchy, tree, force layouts), Custom SVG |
+| **Styling**       | Tailwind CSS 4, Radix UI primitives               |
+| **UI Components** | shadcn/ui (button, input, select, tabs, dropdown) |
+| **Notifications** | Sonner                                            |
+| **Build**         | Vite 7                                            |
+| **Linting**       | ESLint + Prettier                                 |
 
 ---
 
