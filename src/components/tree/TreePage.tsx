@@ -230,7 +230,7 @@ const TreePage = () => {
       }));
 
     const calculatedEdges: RenderEdge[] = hierarchyRoot.links().map((link) => ({
-      id: `${link.source.data.val}-${link.target.data.val}`,
+      id: `edge-${link.source.data.id}-${link.target.data.id}`,
       d: pathGenerator(link) as string,
     }));
 
