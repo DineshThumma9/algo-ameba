@@ -36,11 +36,12 @@ html {
 }
 
 html {
-  @apply h-screen;
+  height: 100dvh;
 }
 
 body {
-  @apply min-h-screen flex flex-col bg-background text-foreground;
+  @apply flex flex-col bg-background text-foreground;
+  min-height: 100dvh;
 }
 
 #root,
@@ -543,6 +544,9 @@ body {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: none;
+    /* Keep content above the Firefox/Chrome retractable bottom address bar
+       and the iOS home-indicator / Safari bottom chrome */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   /* ── Controller playback buttons ── */
@@ -1525,13 +1529,8 @@ body {
     flex-direction: column;
     gap: 12px;
     padding: 14px 16px;
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--card) 94%, transparent);
-    border: 1px solid var(--card-border);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.4),
-      0 0 0 1px rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
+    /* No own border/background — the outer .floating-helper-card provides the chrome.
+       overflow-y is set inline so the content scrolls inside the resize box. */
   }
 
   .floating-helper-close {

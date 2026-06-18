@@ -308,21 +308,56 @@ const GraphPage = () => {
   };
 
   const onRun = contextSafe(() => {
-    const startNum = parseInt(startNode);
-    if (isNaN(startNum) && algorithms[algo].startNode) {
-      toast.error('Please enter a valid start node', {
-        position: 'bottom-right',
-        closeButton: true,
-      });
-      return;
-    }
+    // Build the set of node IDs that actually exist in the current graph
+    const validNodeIds = new Set(graphData.nodes.map((n) => n.id));
+    const existingNodesList = graphData.nodes.map((n) => n.id).join(', ');
 
     const adjList = buildAdjList(graphData.nodes, graphData.links, isDirected);
 
+    if (currentConfig.startNode) {
+      const startNum = parseInt(startNode);
+      if (isNaN(startNum)) {
+        toast.error('Please enter a valid start node', {
+          position: 'bottom-right',
+          closeButton: true,
+        });
+        return;
+      }
+      if (!validNodeIds.has(startNum)) {
+        toast.error(
+          `Node ${startNum} doesn't exist. Current nodes: ${existingNodesList}`,
+          { position: 'bottom-right', closeButton: true }
+        );
+        return;
+      }
+    }
+
+    const startNum = parseInt(startNode);
+
+    // Validate end node if one was provided
+    let endNum: number | undefined = undefined;
+    if (endNode.trim() !== '') {
+      const parsedEnd = parseInt(endNode);
+      if (isNaN(parsedEnd)) {
+        toast.error('Please enter a valid end node', {
+          position: 'bottom-right',
+          closeButton: true,
+        });
+        return;
+      }
+      if (!validNodeIds.has(parsedEnd)) {
+        toast.error(
+          `Node ${parsedEnd} doesn't exist. Current nodes: ${existingNodesList}`,
+          { position: 'bottom-right', closeButton: true }
+        );
+        return;
+      }
+      endNum = parsedEnd;
+    }
+
     if (algo === 'BFS') {
-      const targetNum = endNode ? parseInt(endNode) : undefined;
       const { animateNodes, animateEdges, exploringStates, pathStates } =
-        runBFS(adjList, startNum, targetNum);
+        runBFS(adjList, startNum, endNum);
       buildGraphTimeline(
         animateNodes,
         animateEdges,
@@ -330,9 +365,8 @@ const GraphPage = () => {
         pathStates
       );
     } else if (algo === 'DFS') {
-      const targetNum = endNode ? parseInt(endNode) : undefined;
       const { animateNodes, animateEdges, exploringStates, pathStates } =
-        runDFS(adjList, startNum, targetNum);
+        runDFS(adjList, startNum, endNum);
       buildGraphTimeline(
         animateNodes,
         animateEdges,
@@ -359,7 +393,6 @@ const GraphPage = () => {
         pathStates
       );
     } else if (algo === "Dijkstra's Algorithm") {
-      const targetNum = endNode ? parseInt(endNode) : undefined;
       const {
         animateNodes,
         animateEdges,
@@ -367,7 +400,7 @@ const GraphPage = () => {
         pathStates,
         shortestPathNodes,
         shortestPathEdges,
-      } = runDijstras(adjList, startNum, targetNum) as any;
+      } = runDijstras(adjList, startNum, endNum) as any;
       buildGraphTimeline(
         animateNodes,
         animateEdges,
@@ -724,7 +757,10 @@ const GraphPage = () => {
         </div>
 
         {/* ── Footer: Color Legend + Controller ─────────────────────────────── */}
-        <footer className="footer flex flex-col gap-0 w-full">
+        <footer
+          className="footer flex flex-col gap-0 w-full"
+          style={{ position: 'relative', zIndex: 20 }}
+        >
           <div className="w-full flex justify-center">
             <ColorLegend entries={TREE_GRAPH_LEGEND} className="px-4 py-1.5" />
           </div>

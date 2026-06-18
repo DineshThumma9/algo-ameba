@@ -93,7 +93,9 @@ const HeapPage = () => {
       }));
 
     const calculatedEdges: RenderEdge[] = hierarchyRoot.links().map((link) => ({
-      id: `${link.source.data.index}-${link.target.data.index}`,
+      // Use HeapNode.index (the array position) NOT D3's own .index — the latter
+      // can duplicate when D3 re-numbers nodes during layout.
+      id: `h-${link.source.data.index}-${link.target.data.index}`,
       d: pathGenerator(link) as string,
     }));
 
@@ -209,7 +211,7 @@ const HeapPage = () => {
         'inserted'
       );
       tl.to(
-        `#${pending.newIndex}`,
+        `#node-${pending.newIndex}`, // <-- node- prefix required; bare #10 is invalid CSS
         {
           fill: 'var(--node-visited)',
           scale: 1.15,
@@ -219,7 +221,7 @@ const HeapPage = () => {
         },
         'inserted'
       );
-      tl.to(`#${pending.newIndex}`, { scale: 1, duration: 0.25 });
+      tl.to(`#node-${pending.newIndex}`, { scale: 1, duration: 0.25 });
     } else {
       pending.animateNodes.forEach(({ childIdx, parentIdx }, i) => {
         const swapLabel = `swap-${i}`;
@@ -278,7 +280,7 @@ const HeapPage = () => {
         const minIdx = Math.min(parentIdx, childIdx);
         const maxIdx = Math.max(parentIdx, childIdx);
         tl.to(
-          `#edge-${minIdx}-${maxIdx}`,
+          `#edge-h-${minIdx}-${maxIdx}`,
           { stroke: 'var(--node-visited)', strokeWidth: 4, duration: 0.35 },
           swapLabel
         );
@@ -510,7 +512,7 @@ const HeapPage = () => {
   return (
     <AlgoBookShell
       algoInfo={HEAP_ALGO_INFO[activeOp] ?? null}
-      helper={{ text: phaseLabel || ' ', defaultVisible: false }}
+      helper={{ text: phaseLabel || ' ', defaultVisible: true }}
     >
       <div className="flex flex-col h-screen bg-background font-audiowide shell">
         {/* ── Toolbar ──────────────────────────────────────────────────────── */}
@@ -533,6 +535,17 @@ const HeapPage = () => {
             </button>
             <button className="btn-danger" onClick={onDelete}>
               Heappop
+            </button>
+            <button
+              className="btn-danger"
+              onClick={() => {
+                setHeap([]);
+                labelsRef.current = [];
+                setIsPlaying(false);
+                setPhaseLabel(' ');
+              }}
+            >
+              Clear
             </button>
             <button className="btn-neutral" onClick={onRandom}>
               Random

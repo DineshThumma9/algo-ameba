@@ -72,6 +72,7 @@ const SortPage = () => {
   const [phaseLabel, setPhaseLabel] = useState(' ');
 
   const barsContainerRef = useRef<HTMLDivElement>(null);
+  const isClearedRef = useRef(false); // true when user explicitly cleared — skip auto-regen
   const barRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const [labels, setLabels] = useState<string[]>([]);
@@ -140,6 +141,11 @@ const SortPage = () => {
 
   useEffect(() => {
     if (bars.length > 0) return;
+    if (isClearedRef.current) {
+      // User hit Clear — show empty canvas, don't auto-generate.
+      isClearedRef.current = false;
+      return;
+    }
     const randomBars = Array.from({ length: 12 }, () => ({
       id: createBarId(),
       value: Math.floor(Math.random() * 50) + 1,
@@ -343,7 +349,7 @@ const SortPage = () => {
   return (
     <AlgoBookShell
       algoInfo={SORT_ALGO_INFO[mode] ?? null}
-      helper={{ text: phaseLabel }}
+      helper={{ text: phaseLabel, defaultVisible: true }}
     >
       <SharedLayout
         inputValue={inputValue}
@@ -352,6 +358,11 @@ const SortPage = () => {
         handleSearch={buildSortTimeline}
         actionLabel="Sort"
         generateRandomArray={generateRandomArray}
+        handleClear={() => {
+          isClearedRef.current = true;
+          setBars([]);
+          resetTimeline();
+        }}
         algoMap={algoMap.map((a) => ({ name: a.name, value: a.value }))}
         isPlaying={isPlaying}
         onPlay={playSteps}

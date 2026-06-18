@@ -60,7 +60,9 @@ const algorithms: Record<string, GraphAlgo> = {
     startNode: true,
     endNode: true,
     negAllowed: false,
-    weighted: false,
+    // Edge weights are not used by the algorithm but the toggle lets users
+    // show/hide weight labels on the canvas for clarity.
+    weighted: true,
     allowedNodeTypes: ['directed'],
   },
   "Tarjan's Algorithm": {
@@ -68,23 +70,25 @@ const algorithms: Record<string, GraphAlgo> = {
     startNode: true,
     endNode: true,
     negAllowed: false,
-    weighted: false,
+    weighted: true,
     allowedNodeTypes: ['directed'],
   },
   BFS: {
     name: 'BFS',
-    startNode: true, // BFS requires a start node
-    endNode: true, // Optional: if searching for a specific target
+    startNode: true,
+    endNode: true,
     negAllowed: false,
-    weighted: false,
-    allowedNodeTypes: ['directed', 'undirected'], // Added directed support
+    // BFS does not use weights, but show the toggle so the user can
+    // hide/show edge weight labels on the canvas (same as Dijkstra's).
+    weighted: true,
+    allowedNodeTypes: ['directed', 'undirected'],
   },
   DFS: {
     name: 'DFS',
     startNode: true,
     endNode: true,
     negAllowed: false,
-    weighted: false,
+    weighted: true,
     allowedNodeTypes: ['directed', 'undirected'],
   },
 };

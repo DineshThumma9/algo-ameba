@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type RefObject } from 'react';
-import { EyeIcon, XIcon } from 'lucide-react';
+import { EyeIcon, XIcon, GripVerticalIcon } from 'lucide-react';
 import gsap from '../gsapSetup';
 import { Draggable } from 'gsap/Draggable';
 
@@ -27,19 +27,23 @@ const FloatingHelper = ({
 }: FloatingHelperProps) => {
   const [visible, setVisible] = useState(defaultVisible);
   const helperRef = useRef<HTMLDivElement>(null);
+  const dragHandleRef = useRef<HTMLDivElement>(null);
   const draggableRef = useRef<Draggable[] | undefined>(undefined);
 
   const anchored = Boolean(boundsRef);
-  const isHidden = !text || text.trim() === '';
+  const isEmpty = !text || text.trim() === '';
   const positionClass = anchored
     ? 'absolute top-[80px] left-3 z-30'
     : 'fixed top-[80px] right-3 z-50';
 
+  // Attach GSAP Draggable only to the drag-handle bar so the browser's native
+  // resize grip (bottom-right corner) doesn't interfere with dragging.
   useEffect(() => {
-    if (!visible || !helperRef.current) return;
+    if (!visible || !helperRef.current || !dragHandleRef.current) return;
     const bounds = boundsRef?.current ?? document.body;
     draggableRef.current = Draggable.create(helperRef.current, {
       type: 'x,y',
+      trigger: dragHandleRef.current, // drag only via the header strip
       bounds,
       zIndexBoost: false,
     });
@@ -51,10 +55,7 @@ const FloatingHelper = ({
 
   if (!visible) {
     return (
-      <div
-        className={`${positionClass} flex flex-col gap-2`}
-        style={{ display: isHidden ? 'none' : undefined }}
-      >
+      <div className={`${positionClass} flex flex-col gap-2`}>
         <button
           type="button"
           className="floating-helper-icon-btn"
@@ -69,32 +70,93 @@ const FloatingHelper = ({
   }
 
   return (
-    <div
-      className={`${positionClass} flex flex-col items-start gap-2`}
-      style={{ display: isHidden ? 'none' : undefined }}
-    >
+    <div className={`${positionClass} flex flex-col items-start gap-2`}>
+      {/*
+       * Outer wrapper is what GSAP Draggable moves. It must have a fixed
+       * initial size so that `resize: both` on the inner card works correctly
+       * (the browser needs a concrete width to anchor the resize grip to).
+       */}
       <div
         ref={helperRef}
-        className="floating-helper-card w-[min(100%,320px)] cursor-move sm:max-w-[340px]"
-        style={{ touchAction: 'none', opacity: text === ' ' ? 0 : 1 }}
+        className="floating-helper-card"
+        style={{
+          touchAction: 'none',
+          /* ── Resizable card ──────────────────────────────────────────
+           * BOTH axes need an explicit size for `resize` to work.
+           * Without a concrete height the browser can only resize width.
+           * overflow:auto enables the native resize grip (◢ corner).
+           * ─────────────────────────────────────────────────────────── */
+          resize: 'both',
+          overflow: 'hidden', // outer clips; inner scrolls
+          width: 'min(100vw - 1.5rem, 320px)',
+          height: '240px', // explicit → vertical resize works
+          minWidth: '200px',
+          maxWidth: '560px',
+          minHeight: '120px',
+          maxHeight: '80vh',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
-        <div className="floating-helper-panel">
-          <div className="flex w-full items-start justify-between gap-3">
-            <p
-              id={textId}
-              className="font-plex text-sm font-medium leading-relaxed text-foreground"
+        {/* Drag handle — only this strip initiates GSAP drag */}
+        <div
+          ref={dragHandleRef}
+          className="floating-helper-drag-handle flex w-full items-center justify-between gap-2 px-3 py-1.5 cursor-move select-none"
+          style={{
+            borderBottom:
+              '1px solid color-mix(in srgb, var(--border) 40%, transparent)',
+            borderRadius: 'inherit',
+            borderBottomLeftRadius: 0,
+            borderBottomRightRadius: 0,
+            background: 'color-mix(in srgb, var(--panel-bg) 60%, transparent)',
+          }}
+        >
+          <div className="flex items-center gap-1.5 opacity-60">
+            <GripVerticalIcon
+              className="h-3.5 w-3.5"
+              style={{ color: 'var(--muted-text)' }}
+            />
+            <span
+              className="font-mono text-[10px] tracking-widest uppercase"
+              style={{ color: 'var(--muted-text)' }}
             >
-              {text}
-            </p>
-            <button
-              type="button"
-              onClick={() => setVisible(false)}
-              className="floating-helper-close"
-              aria-label="Hide helper"
-            >
-              <XIcon className="h-4 w-4" />
-            </button>
+              Step log
+            </span>
           </div>
+          <button
+            type="button"
+            onClick={() => setVisible(false)}
+            className="floating-helper-close"
+            aria-label="Hide helper"
+          >
+            <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Content area — takes remaining height, scrolls if content overflows */}
+        <div
+          className="floating-helper-panel"
+          style={{
+            borderTop: 'none',
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+          }}
+        >
+          <p
+            id={textId}
+            className={`font-plex text-sm font-medium leading-relaxed ${
+              isEmpty ? 'italic' : 'text-foreground'
+            }`}
+            style={isEmpty ? { color: 'var(--muted-text)' } : undefined}
+          >
+            {isEmpty
+              ? 'Run the algorithm to see step-by-step hints here.'
+              : text}
+          </p>
 
           {nextExploring && nextExploring.length > 0 && (
             <div className="floating-helper-section">

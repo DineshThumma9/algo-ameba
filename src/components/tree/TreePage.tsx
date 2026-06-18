@@ -158,6 +158,7 @@ const TreePage = () => {
   const [speed, setSpeed] = useState(0.75);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const labelsRef = useRef<string[]>([]);
+  const isClearedRef = useRef(false); // true when user explicitly cleared — skip auto-regen
 
   // Two refs needed: one for the canvas, one for the moveable group
   const containerRef = useRef<SVGSVGElement>(null);
@@ -265,6 +266,10 @@ const TreePage = () => {
 
   useEffect(() => {
     if (treeRoot == null) {
+      if (isClearedRef.current) {
+        isClearedRef.current = false;
+        return; // user cleared intentionally — show empty canvas
+      }
       onRandom();
     }
   }, [treeRoot]);
@@ -566,7 +571,7 @@ const TreePage = () => {
   return (
     <AlgoBookShell
       algoInfo={TREE_ALGO_INFO[traversal.toLowerCase()] ?? null}
-      helper={{ text: phaseLabel || ' ', defaultVisible: false }}
+      helper={{ text: phaseLabel || ' ', defaultVisible: true }}
     >
       <div className="flex flex-col h-screen bg-background font-audiowide shell">
         {/* ── Toolbar ──────────────────────────────────────────────────────── */}
@@ -601,6 +606,19 @@ const TreePage = () => {
                 </button>
                 <button className="btn-neutral bg-purple" onClick={onRandom}>
                   Generate Random
+                </button>
+                <button
+                  className="btn-danger"
+                  onClick={() => {
+                    isClearedRef.current = true;
+                    setTreeRoot(null);
+                    timelineRef.current?.clear().pause(0);
+                    labelsRef.current = [];
+                    setIsPlaying(false);
+                    setPhaseLabel(' ');
+                  }}
+                >
+                  Clear
                 </button>
               </div>
             </div>

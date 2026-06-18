@@ -74,9 +74,14 @@ export const buildBubbleSortFrames = (initialBars: SortBar[]): SortFrame[] => {
   const frames: SortFrame[] = [];
   const sortedIds = new Set<string>();
 
-  pushFrame(frames, bars, {}, 0.3);
+  pushFrame(frames, bars, {}, 0.3, undefined, {
+    phaseLabel: 'Starting Bubble Sort — largest elements bubble to the end.',
+  });
 
   for (let i = 0; i < bars.length - 1; i++) {
+    pushFrame(frames, bars, {}, 0.2, undefined, {
+      phaseLabel: `Pass ${i + 1} of ${bars.length - 1}`,
+    });
     for (let j = 0; j < bars.length - 1 - i; j++) {
       const states: Record<string, SortBarState> = {};
       sortedIds.forEach((id) => {
@@ -84,7 +89,9 @@ export const buildBubbleSortFrames = (initialBars: SortBar[]): SortFrame[] => {
       });
       states[bars[j].id] = 'comparing';
       states[bars[j + 1].id] = 'comparing';
-      pushFrame(frames, bars, states, 0.55);
+      pushFrame(frames, bars, states, 0.55, undefined, {
+        phaseLabel: `Comparing ${bars[j].value} and ${bars[j + 1].value}`,
+      });
 
       if (bars[j].value > bars[j + 1].value) {
         [bars[j], bars[j + 1]] = [bars[j + 1], bars[j]];
@@ -94,7 +101,9 @@ export const buildBubbleSortFrames = (initialBars: SortBar[]): SortFrame[] => {
         });
         swapStates[bars[j].id] = 'swapping';
         swapStates[bars[j + 1].id] = 'swapping';
-        pushFrame(frames, bars, swapStates, 0.6);
+        pushFrame(frames, bars, swapStates, 0.6, undefined, {
+          phaseLabel: `Swapping — ${bars[j].value} < ${bars[j + 1].value}, so swap`,
+        });
       }
     }
 
@@ -103,7 +112,9 @@ export const buildBubbleSortFrames = (initialBars: SortBar[]): SortFrame[] => {
     sortedIds.forEach((id) => {
       passStates[id] = 'sorted';
     });
-    pushFrame(frames, bars, passStates, 0.4);
+    pushFrame(frames, bars, passStates, 0.4, undefined, {
+      phaseLabel: `${bars[bars.length - 1 - i].value} is now in its final position`,
+    });
   }
 
   if (bars.length > 0) sortedIds.add(bars[0].id);
@@ -111,7 +122,9 @@ export const buildBubbleSortFrames = (initialBars: SortBar[]): SortFrame[] => {
   sortedIds.forEach((id) => {
     endStates[id] = 'sorted';
   });
-  pushFrame(frames, bars, endStates, 0.5);
+  pushFrame(frames, bars, endStates, 0.5, undefined, {
+    phaseLabel: 'Array fully sorted!',
+  });
 
   return frames;
 };
@@ -124,10 +137,16 @@ export const buildSelectionSortFrames = (
   const frames: SortFrame[] = [];
   const sortedIds = new Set<string>();
 
-  pushFrame(frames, bars, {}, 0.3);
+  pushFrame(frames, bars, {}, 0.3, undefined, {
+    phaseLabel: 'Starting Selection Sort — find the minimum in each pass.',
+  });
 
   for (let i = 0; i < bars.length - 1; i++) {
     let minIndex = i;
+
+    pushFrame(frames, bars, {}, 0.2, undefined, {
+      phaseLabel: `Pass ${i + 1}: scanning for minimum from index ${i}`,
+    });
 
     for (let j = i + 1; j < bars.length; j++) {
       const states: Record<string, SortBarState> = {};
@@ -136,7 +155,9 @@ export const buildSelectionSortFrames = (
       });
       states[bars[minIndex].id] = 'checking';
       states[bars[j].id] = 'comparing';
-      pushFrame(frames, bars, states, 0.5);
+      pushFrame(frames, bars, states, 0.5, undefined, {
+        phaseLabel: `Checking ${bars[j].value} vs current min ${bars[minIndex].value}`,
+      });
 
       if (bars[j].value < bars[minIndex].value) {
         minIndex = j;
@@ -145,7 +166,9 @@ export const buildSelectionSortFrames = (
           minStates[id] = 'sorted';
         });
         minStates[bars[minIndex].id] = 'checking';
-        pushFrame(frames, bars, minStates, 0.45);
+        pushFrame(frames, bars, minStates, 0.45, undefined, {
+          phaseLabel: `New minimum found: ${bars[minIndex].value} at index ${minIndex}`,
+        });
       }
     }
 
@@ -157,7 +180,9 @@ export const buildSelectionSortFrames = (
       });
       swapStates[bars[i].id] = 'swapping';
       swapStates[bars[minIndex].id] = 'swapping';
-      pushFrame(frames, bars, swapStates, 0.6);
+      pushFrame(frames, bars, swapStates, 0.6, undefined, {
+        phaseLabel: `Placing minimum ${bars[i].value} at index ${i}`,
+      });
     }
 
     sortedIds.add(bars[i].id);
@@ -165,7 +190,9 @@ export const buildSelectionSortFrames = (
     sortedIds.forEach((id) => {
       passStates[id] = 'sorted';
     });
-    pushFrame(frames, bars, passStates, 0.35);
+    pushFrame(frames, bars, passStates, 0.35, undefined, {
+      phaseLabel: `${bars[i].value} is now in its final position`,
+    });
   }
 
   if (bars.length > 0) sortedIds.add(bars[bars.length - 1].id);
@@ -173,7 +200,9 @@ export const buildSelectionSortFrames = (
   sortedIds.forEach((id) => {
     endStates[id] = 'sorted';
   });
-  pushFrame(frames, bars, endStates, 0.5);
+  pushFrame(frames, bars, endStates, 0.5, undefined, {
+    phaseLabel: 'Array fully sorted!',
+  });
 
   return frames;
 };
@@ -186,10 +215,17 @@ export const buildInsertionSortFrames = (
   const frames: SortFrame[] = [];
   const sortedIds = new Set<string>();
 
-  pushFrame(frames, bars, {}, 0.3);
+  pushFrame(frames, bars, {}, 0.3, undefined, {
+    phaseLabel:
+      'Starting Insertion Sort — build a sorted region one element at a time.',
+  });
 
   for (let i = 1; i < bars.length; i++) {
     let j = i;
+
+    pushFrame(frames, bars, {}, 0.2, undefined, {
+      phaseLabel: `Inserting ${bars[i].value} into the sorted region`,
+    });
 
     while (j > 0) {
       const left = bars[j - 1];
@@ -201,7 +237,9 @@ export const buildInsertionSortFrames = (
       });
       compareStates[left.id] = 'comparing';
       compareStates[right.id] = 'checking';
-      pushFrame(frames, bars, compareStates, 0.5);
+      pushFrame(frames, bars, compareStates, 0.5, undefined, {
+        phaseLabel: `${right.value} < ${left.value}? — ${right.value < left.value ? 'Yes, shift right' : 'No, stop here'}`,
+      });
 
       if (left.value <= right.value) break;
 
@@ -212,7 +250,9 @@ export const buildInsertionSortFrames = (
       });
       swapStates[bars[j - 1].id] = 'swapping';
       swapStates[bars[j].id] = 'swapping';
-      pushFrame(frames, bars, swapStates, 0.55);
+      pushFrame(frames, bars, swapStates, 0.55, undefined, {
+        phaseLabel: `Shifting ${bars[j].value} one position right`,
+      });
 
       j -= 1;
     }
@@ -222,14 +262,18 @@ export const buildInsertionSortFrames = (
     sortedIds.forEach((id) => {
       passStates[id] = 'sorted';
     });
-    pushFrame(frames, bars, passStates, 0.35);
+    pushFrame(frames, bars, passStates, 0.35, undefined, {
+      phaseLabel: `Sorted region now covers indices 0–${i}`,
+    });
   }
 
   const endStates: Record<string, SortBarState> = {};
   bars.forEach((bar) => {
     endStates[bar.id] = 'sorted';
   });
-  pushFrame(frames, bars, endStates, 0.5);
+  pushFrame(frames, bars, endStates, 0.5, undefined, {
+    phaseLabel: 'Array fully sorted!',
+  });
 
   return frames;
 };

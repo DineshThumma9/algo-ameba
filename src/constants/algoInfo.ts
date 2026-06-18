@@ -19,6 +19,8 @@ import { dfsImpl } from './algo/dfs';
 import { dijstrasImpl } from './algo/dijstras';
 import { primsImpl } from './algo/prims';
 import { kruskalsImpl } from './algo/kruskals';
+import { monotonicIncStackImpl } from './algo/montonic-inc-stack';
+import { monotonicDecStackImpl } from './algo/monotonic-dec-stack';
 import { heapPushImpl } from './algo/heapppush';
 import { heapPopImpl } from './algo/heappop';
 
@@ -265,6 +267,40 @@ export const STACK_INFO: AlgoInfo = {
   implementations: stackImpl,
 };
 
+// ── Monotonic Increasing Stack ───────────────────────────────────────────────
+export const MONOTONIC_INC_STACK_INFO: AlgoInfo = {
+  name: 'Monotonic Increasing Stack',
+  category: 'Data Structure',
+  complexity: { time: 'O(n)', space: 'O(n)' },
+  description:
+    'A monotonic increasing stack maintains elements in strictly increasing order from bottom to top. When a new element is pushed, all top elements that are greater than or equal to it are popped first. This is the key tool for finding the "Next Smaller Element" to the right.',
+  steps: [
+    'For each element num in the array:',
+    'While the stack is not empty AND stack.top() >= num → pop.',
+    'Push num onto the stack.',
+    'After processing, the stack holds the increasing subsequence.',
+    'Classic use: Next Smaller Element — when you pop, the current num is the answer for the popped element.',
+  ],
+  implementations: monotonicIncStackImpl,
+};
+
+// ── Monotonic Decreasing Stack ───────────────────────────────────────────────
+export const MONOTONIC_DEC_STACK_INFO: AlgoInfo = {
+  name: 'Monotonic Decreasing Stack',
+  category: 'Data Structure',
+  complexity: { time: 'O(n)', space: 'O(n)' },
+  description:
+    'A monotonic decreasing stack maintains elements in strictly decreasing order from bottom to top. When a new element is pushed, all top elements that are smaller than or equal to it are popped first. This is the key tool for finding the "Next Greater Element" to the right.',
+  steps: [
+    'For each element num in the array:',
+    'While the stack is not empty AND stack.top() <= num → pop.',
+    'Push num onto the stack.',
+    'After processing, the stack holds the decreasing subsequence.',
+    'Classic use: Next Greater Element — when you pop, the current num is the answer for the popped element.',
+  ],
+  implementations: monotonicDecStackImpl,
+};
+
 // ── Queue ────────────────────────────────────────────────────────────────────
 export const QUEUE_INFO: AlgoInfo = {
   name: 'Queue',
@@ -404,4 +440,11 @@ export const GRAPH_ALGO_INFO: Record<string, AlgoInfo> = {
 export const HEAP_ALGO_INFO: Record<string, AlgoInfo> = {
   push: HEAP_PUSH_INFO,
   pop: HEAP_POP_INFO,
+};
+
+/** Stack page: algo mode → info */
+export const STACK_ALGO_INFO: Record<string, AlgoInfo> = {
+  stack: STACK_INFO,
+  'monotonic inc stack': MONOTONIC_INC_STACK_INFO,
+  'monotonic dec stack': MONOTONIC_DEC_STACK_INFO,
 };

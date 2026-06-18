@@ -429,7 +429,7 @@ const SearchPage = () => {
   return (
     <AlgoBookShell
       algoInfo={SEARCH_ALGO_INFO[mode] ?? null}
-      helper={{ text: phaseLabel }}
+      helper={{ text: phaseLabel, defaultVisible: true }}
     >
       <SharedLayout
         inputValue={inputValue}
@@ -441,6 +441,12 @@ const SearchPage = () => {
         handleSearch={handleSearch}
         actionLabel="Search"
         generateRandomArray={generateRandomArray}
+        handleClear={() => {
+          setBars([]);
+          resetAnimation();
+          resetBarTweens();
+          setPhaseLabel('');
+        }}
         algoMap={algoMap.map((algo) => ({
           name: algo.name,
           value: algo.value,

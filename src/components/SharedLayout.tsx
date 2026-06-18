@@ -35,6 +35,7 @@ interface SharedLayoutProps {
   setSearchValue?: (val: string) => void;
   handleInsert: () => void;
   handleSearch?: () => void;
+  handleClear?: () => void;
   actionLabel?: string;
   generateRandomArray: () => void;
   algoMap: Algo[];
@@ -61,6 +62,7 @@ const SharedLayout = ({
   setSearchValue,
   handleInsert,
   handleSearch,
+  handleClear,
   actionLabel,
   generateRandomArray,
   algoMap,
@@ -124,10 +126,15 @@ const SharedLayout = ({
               </button>
             )}
 
-          {/* Random Button */}
+          {/* Random + Clear buttons */}
           <button onClick={() => generateRandomArray()} className="btn-neutral">
             Generate Random
           </button>
+          {handleClear && (
+            <button onClick={handleClear} className="btn-danger">
+              Clear
+            </button>
+          )}
         </div>
 
         {/* Algorithm Dropdown */}
